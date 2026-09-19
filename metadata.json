@@ -1,0 +1,6 @@
+{
+  "name": "Forapos",
+  "description": "Enterprise Mobile Point of Sale (POS) and Inventory Management System with real-time barcode scanning, dynamic barcode generator, multi-payment checkout, shift reconciliation, CRM, and analytics.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
