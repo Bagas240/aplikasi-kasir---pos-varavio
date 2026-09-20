@@ -12,6 +12,8 @@ import com.example.data.model.OrderEntity
 import com.example.data.model.Product
 import com.example.data.model.PurchaseOrder
 import com.example.data.model.Shift
+import com.example.data.model.ShiftSchedule
+import com.example.data.model.StaffUser
 import com.example.data.model.StockAdjustment
 import com.example.data.model.TransactionLog
 import kotlinx.coroutines.flow.Flow
@@ -48,6 +50,9 @@ interface PosDao {
 
     @Query("UPDATE products SET stock = :newStock WHERE id = :id")
     suspend fun updateStock(id: Long, newStock: Int)
+
+    @Query("DELETE FROM products WHERE sku IN (:skus)")
+    suspend fun deleteProductsBySkus(skus: List<String>)
 
     // ORDERS
     @Query("SELECT * FROM orders ORDER BY timestamp DESC")
@@ -148,4 +153,46 @@ interface PosDao {
 
     @Query("DELETE FROM transaction_logs WHERE id = :id")
     suspend fun deleteTransactionLog(id: Long)
+
+    // STAFF USERS & CASHIERS
+    @Query("SELECT * FROM staff_users ORDER BY role ASC, name ASC")
+    fun getAllStaffUsers(): Flow<List<StaffUser>>
+
+    @Query("SELECT * FROM staff_users WHERE id = :id LIMIT 1")
+    suspend fun getStaffUserById(id: String): StaffUser?
+
+    @Query("SELECT * FROM staff_users WHERE pin = :pin LIMIT 1")
+    suspend fun getStaffUserByPin(pin: String): StaffUser?
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertStaffUser(user: StaffUser)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertStaffUsers(users: List<StaffUser>)
+
+    @Update
+    suspend fun updateStaffUser(user: StaffUser)
+
+    @Delete
+    suspend fun deleteStaffUser(user: StaffUser)
+
+    // SHIFT SCHEDULES (Shift 1, Shift 2, dll)
+    @Query("SELECT * FROM shift_schedules ORDER BY id ASC")
+    fun getAllShiftSchedules(): Flow<List<ShiftSchedule>>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertShiftSchedule(schedule: ShiftSchedule): Long
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertShiftSchedules(schedules: List<ShiftSchedule>)
+
+    @Update
+    suspend fun updateShiftSchedule(schedule: ShiftSchedule)
+
+    @Delete
+    suspend fun deleteShiftSchedule(schedule: ShiftSchedule)
+
+    // TRANSACTIONS BY CASHIER
+    @Query("SELECT * FROM transaction_logs WHERE cashierName = :cashierName ORDER BY timestamp DESC")
+    fun getTransactionsByCashier(cashierName: String): Flow<List<TransactionLog>>
 }

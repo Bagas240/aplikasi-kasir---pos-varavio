@@ -122,6 +122,7 @@ fun PosMasterApp(viewModel: PosViewModel = viewModel()) {
 
     val currentTab by viewModel.currentTab.collectAsStateWithLifecycle()
     val currentUser by viewModel.currentUser.collectAsStateWithLifecycle()
+    val staffUsers by viewModel.staffUsers.collectAsStateWithLifecycle()
     val shifts by viewModel.shifts.collectAsStateWithLifecycle()
     val storeProfile by viewModel.storeProfile.collectAsStateWithLifecycle()
 
@@ -582,6 +583,7 @@ fun PosMasterApp(viewModel: PosViewModel = viewModel()) {
             if (showStaffDialog) {
                 StaffPinDialog(
                     currentUser = currentUser,
+                    staffUsers = staffUsers,
                     onUserSwitched = { newStaff ->
                         viewModel.switchUser(newStaff)
                         showStaffDialog = false

@@ -875,6 +875,7 @@ fun CashierScreen(
             itemsCount = cartItems.sumOf { it.quantity },
             selectedCustomer = selectedCustomer,
             storeProfile = storeProfile,
+            onUpdateQrisImage = { uri -> viewModel.updateStoreQrisImage(uri) },
             onProcessPayment = { method, cashPaid, splitMethod2, splitAmt1, splitAmt2 ->
                 showCheckoutDialog = false
                 viewModel.processCheckout(method, cashPaid, splitMethod2, splitAmt1, splitAmt2)

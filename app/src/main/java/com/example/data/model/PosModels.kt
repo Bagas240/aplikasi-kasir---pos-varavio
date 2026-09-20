@@ -4,16 +4,33 @@ import androidx.room.Entity
 import androidx.room.Index
 import androidx.room.PrimaryKey
 
-enum class UserRole {
-    OWNER,
-    CASHIER
+enum class UserRole(val label: String) {
+    OWNER("Owner / Pemilik"),
+    MANAGER("Manajer"),
+    CASHIER("Kasir")
 }
 
+@Entity(tableName = "staff_users")
 data class StaffUser(
+    @PrimaryKey
     val id: String,
     val name: String,
     val role: UserRole,
-    val pin: String
+    val pin: String,
+    val phone: String = "",
+    val isActive: Boolean = true,
+    val createdAt: Long = System.currentTimeMillis()
+)
+
+@Entity(tableName = "shift_schedules")
+data class ShiftSchedule(
+    @PrimaryKey(autoGenerate = true)
+    val id: Long = 0,
+    val name: String,
+    val startTime: String = "07:00",
+    val endTime: String = "15:00",
+    val isActive: Boolean = true,
+    val notes: String = ""
 )
 
 data class ProductVariant(
@@ -111,7 +128,14 @@ enum class OrderStatus {
     UNPAID
 }
 
-@Entity(tableName = "orders")
+@Entity(
+    tableName = "orders",
+    indices = [
+        Index(value = ["timestamp"]),
+        Index(value = ["shiftId"]),
+        Index(value = ["status"])
+    ]
+)
 data class OrderEntity(
     @PrimaryKey
     val orderId: String,
@@ -137,7 +161,9 @@ data class OrderEntity(
     val status: String = OrderStatus.COMPLETED.name,
     val draftTag: String = "", // e.g. "Table 4"
     val itemsJson: String = "[]",
-    val shiftId: Long = 0L
+    val shiftId: Long = 0L,
+    val shiftName: String = "",
+    val cashierRole: String = "Kasir"
 )
 
 @Entity(tableName = "customers")
@@ -197,11 +223,21 @@ data class PurchaseOrder(
     val createdAt: Long = System.currentTimeMillis()
 )
 
-@Entity(tableName = "shifts")
+@Entity(
+    tableName = "shifts",
+    indices = [
+        Index(value = ["status"]),
+        Index(value = ["startTime"])
+    ]
+)
 data class Shift(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0,
+    val shiftScheduleName: String = "Shift 1 (Pagi)",
+    val shiftScheduleTime: String = "07:00 - 15:00",
     val cashierName: String,
+    val cashierId: String = "",
+    val cashierRole: String = "Kasir",
     val startTime: Long = System.currentTimeMillis(),
     val endTime: Long? = null,
     val startingCash: Double,
@@ -221,7 +257,8 @@ data class Shift(
     indices = [
         Index(value = ["orderId"]),
         Index(value = ["timestamp"]),
-        Index(value = ["status"])
+        Index(value = ["status"]),
+        Index(value = ["cashierName"])
     ]
 )
 data class TransactionLog(
@@ -230,6 +267,8 @@ data class TransactionLog(
     val orderId: String,
     val timestamp: Long = System.currentTimeMillis(),
     val cashierName: String = "Kasir 1",
+    val cashierRole: String = "Kasir",
+    val shiftName: String = "",
     val customerName: String = "Walk-in Customer",
     val paymentMethod: String = "CASH",
     val subtotal: Double = 0.0,

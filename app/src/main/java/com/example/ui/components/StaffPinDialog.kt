@@ -51,17 +51,21 @@ import com.example.ui.theme.VibrantBlue
 @Composable
 fun StaffPinDialog(
     currentUser: StaffUser,
+    staffUsers: List<StaffUser> = emptyList(),
     onUserSwitched: (StaffUser) -> Unit,
     onLogout: (() -> Unit)? = null,
     onDismiss: () -> Unit
 ) {
-    val predefinedUsers = listOf(
-        StaffUser("U-001", "Owner Toko (Admin)", UserRole.OWNER, "1234"),
-        StaffUser("U-002", "Kasir 1 (Staff)", UserRole.CASHIER, "0000"),
-        StaffUser("U-003", "Kasir 2 (Staff)", UserRole.CASHIER, "1111")
+    val effectiveUsers = if (staffUsers.isNotEmpty()) staffUsers else listOf(
+        StaffUser("U-001", "Bagas (Owner)", UserRole.OWNER, "1234"),
+        StaffUser("U-002", "Dian (Manajer)", UserRole.MANAGER, "2222"),
+        StaffUser("U-003", "Rian (Kasir 1)", UserRole.CASHIER, "0000"),
+        StaffUser("U-004", "Siti (Kasir 2)", UserRole.CASHIER, "1111")
     )
 
-    var selectedTargetUser by remember { mutableStateOf(predefinedUsers.first { it.id != currentUser.id }) }
+    var selectedTargetUser by remember(effectiveUsers) {
+        mutableStateOf(effectiveUsers.firstOrNull { it.id != currentUser.id } ?: effectiveUsers.first())
+    }
     var enteredPin by remember { mutableStateOf("") }
     var errorMessage by remember { mutableStateOf<String?>(null) }
 
@@ -73,7 +77,7 @@ fun StaffPinDialog(
                     if (enteredPin == selectedTargetUser.pin) {
                         onUserSwitched(selectedTargetUser)
                     } else {
-                        errorMessage = "PIN Salah! (Petunjuk: Owner '1234', Kasir '0000')"
+                        errorMessage = "Password / PIN salah untuk ${selectedTargetUser.name}!"
                     }
                 },
                 colors = ButtonDefaults.buttonColors(containerColor = DeepRoyalBlue),
@@ -110,17 +114,28 @@ fun StaffPinDialog(
                 Spacer(modifier = Modifier.width(8.dp))
                 Column {
                     Text("Ganti Akun Kasir / Role", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = DarkSlate)
-                    Text("Saat ini: ${currentUser.name}", fontSize = 11.sp, color = Color(0xFF64748B))
+                    Text("Saat ini: ${currentUser.name} (${currentUser.role.label})", fontSize = 11.sp, color = Color(0xFF64748B))
                 }
             }
         },
         text = {
             Column {
-                Text("Pilih Akun Staff:", fontSize = 13.sp, fontWeight = FontWeight.Medium, color = DarkSlate)
+                Text("Pilih Akun Pengguna (${effectiveUsers.size} Terdaftar):", fontSize = 13.sp, fontWeight = FontWeight.Medium, color = DarkSlate)
                 Spacer(modifier = Modifier.height(6.dp))
 
-                predefinedUsers.forEach { staff ->
+                effectiveUsers.forEach { staff ->
                     val isSelected = staff.id == selectedTargetUser.id
+                    val roleColor = when (staff.role) {
+                        UserRole.OWNER -> DeepRoyalBlue
+                        UserRole.MANAGER -> Color(0xFFD97706) // Amber
+                        UserRole.CASHIER -> EmeraldGreen
+                    }
+                    val roleDesc = when (staff.role) {
+                        UserRole.OWNER -> "Akses Penuh (Owner/Pemilik)"
+                        UserRole.MANAGER -> "Akses Manajerial & Laporan"
+                        UserRole.CASHIER -> "Operasional Kasir & Penjualan"
+                    }
+
                     Card(
                         onClick = {
                             selectedTargetUser = staff
@@ -146,17 +161,23 @@ fun StaffPinDialog(
                                 Icon(
                                     if (staff.role == UserRole.OWNER) Icons.Default.AdminPanelSettings else Icons.Default.Person,
                                     contentDescription = null,
-                                    tint = if (staff.role == UserRole.OWNER) DeepRoyalBlue else EmeraldGreen,
+                                    tint = roleColor,
                                     modifier = Modifier.size(20.dp)
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Column {
-                                    Text(staff.name, fontWeight = FontWeight.Bold, fontSize = 13.sp, color = DarkSlate)
-                                    Text(
-                                        if (staff.role == UserRole.OWNER) "Akses Penuh (Owner/Admin)" else "Akses Terbatas (Kasir)",
-                                        fontSize = 10.sp,
-                                        color = Color(0xFF64748B)
-                                    )
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Text(staff.name, fontWeight = FontWeight.Bold, fontSize = 13.sp, color = DarkSlate)
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        Box(
+                                            modifier = Modifier
+                                                .background(roleColor.copy(alpha = 0.15f), RoundedCornerShape(4.dp))
+                                                .padding(horizontal = 6.dp, vertical = 2.dp)
+                                        ) {
+                                            Text(staff.role.label, fontSize = 10.sp, fontWeight = FontWeight.Bold, color = roleColor)
+                                        }
+                                    }
+                                    Text(roleDesc, fontSize = 10.sp, color = Color(0xFF64748B))
                                 }
                             }
                             if (isSelected) {

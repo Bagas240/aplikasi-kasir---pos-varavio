@@ -4,6 +4,7 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.data.local.AppDatabase
+import com.example.data.local.AuthPreferences
 import com.example.data.model.CartItem
 import com.example.data.model.Customer
 import com.example.data.model.CustomerDebt
@@ -13,6 +14,7 @@ import com.example.data.model.PaymentMethod
 import com.example.data.model.Product
 import com.example.data.model.PurchaseOrder
 import com.example.data.model.Shift
+import com.example.data.model.ShiftSchedule
 import com.example.data.model.StaffUser
 import com.example.data.model.StockAdjustment
 import com.example.data.model.StoreProfile
@@ -48,11 +50,23 @@ class PosViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             repository.seedInitialDataIfNeeded()
         }
+        viewModelScope.launch {
+            repository.allStaffUsers.collect { users ->
+                if (users.isNotEmpty()) {
+                    val matching = users.find { it.id == _currentUser.value.id }
+                    if (matching != null) {
+                        _currentUser.value = matching
+                    } else if (_currentUser.value.id == "U-001") {
+                        _currentUser.value = users.first()
+                    }
+                }
+            }
+        }
     }
 
     // AUTH / STAFF
     private val _currentUser = MutableStateFlow(
-        StaffUser(id = "U-001", name = "Owner Toko (Admin)", role = UserRole.OWNER, pin = "1234")
+        StaffUser(id = "U-001", name = "Bagas (Owner)", role = UserRole.OWNER, pin = "1234")
     )
     val currentUser: StateFlow<StaffUser> = _currentUser.asStateFlow()
 
@@ -86,6 +100,12 @@ class PosViewModel(application: Application) : AndroidViewModel(application) {
     val shifts: StateFlow<List<Shift>> = repository.allShifts
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+    val staffUsers: StateFlow<List<StaffUser>> = repository.allStaffUsers
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val shiftSchedules: StateFlow<List<ShiftSchedule>> = repository.allShiftSchedules
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
     val transactionLogs: StateFlow<List<TransactionLog>> = repository.allTransactionLogs
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
@@ -93,10 +113,37 @@ class PosViewModel(application: Application) : AndroidViewModel(application) {
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     // STORE PROFILE
-    private val _storeProfile = MutableStateFlow(StoreProfile())
+    private val _storeProfile = MutableStateFlow(
+        run {
+            val prefs = AuthPreferences(application)
+            StoreProfile(
+                storeName = prefs.storeName,
+                address = prefs.storeAddress,
+                phone = prefs.storePhone,
+                logoUri = prefs.storeLogoUri,
+                qrisImageUri = prefs.storeQrisImageUri
+            )
+        }
+    )
     val storeProfile: StateFlow<StoreProfile> = _storeProfile.asStateFlow()
+
     fun updateStoreProfile(profile: StoreProfile) {
         _storeProfile.value = profile
+        val authPrefs = AuthPreferences(getApplication())
+        authPrefs.saveStoreProfile(
+            name = profile.storeName,
+            address = profile.address,
+            phone = profile.phone,
+            logoUri = profile.logoUri,
+            qrisUri = profile.qrisImageUri
+        )
+    }
+
+    fun updateStoreQrisImage(uri: String?) {
+        val updated = _storeProfile.value.copy(qrisImageUri = uri)
+        _storeProfile.value = updated
+        val authPrefs = AuthPreferences(getApplication())
+        authPrefs.storeQrisImageUri = uri
     }
 
     // CART STATE
@@ -270,11 +317,15 @@ class PosViewModel(application: Application) : AndroidViewModel(application) {
         val grandTotal = cartGrandTotal
         val change = if (method == PaymentMethod.CASH) (cashPaid - grandTotal).coerceAtLeast(0.0) else 0.0
         val orderId = "ORD-" + System.currentTimeMillis().toString().takeLast(8)
+        val activeShift = shifts.value.find { it.status == "OPEN" }
 
         val order = OrderEntity(
             orderId = orderId,
             timestamp = System.currentTimeMillis(),
             cashierName = _currentUser.value.name,
+            cashierRole = _currentUser.value.role.label,
+            shiftName = activeShift?.let { "${it.shiftScheduleName} (${it.shiftScheduleTime})" } ?: "",
+            shiftId = activeShift?.id ?: 0L,
             customerId = _selectedCustomer.value?.id,
             customerName = _selectedCustomer.value?.name ?: "Pelanggan Walk-In",
             customerPhone = _selectedCustomer.value?.phone ?: "",
@@ -408,9 +459,22 @@ class PosViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     // SHIFT & CASH REGISTER
-    fun openShift(startingFloat: Double) {
+    fun openShift(
+        startingFloat: Double,
+        cashierName: String = _currentUser.value.name,
+        shiftScheduleName: String = "Shift 1 (Pagi)",
+        shiftScheduleTime: String = "07:00 - 15:00"
+    ) {
+        val selectedUser = staffUsers.value.find { it.name == cashierName } ?: _currentUser.value
         viewModelScope.launch {
-            repository.openShift(_currentUser.value.name, startingFloat)
+            repository.openShift(
+                cashierName = cashierName,
+                startingCash = startingFloat,
+                shiftScheduleName = shiftScheduleName,
+                shiftScheduleTime = shiftScheduleTime,
+                cashierId = selectedUser.id,
+                cashierRole = selectedUser.role.label
+            )
         }
     }
 
@@ -504,5 +568,44 @@ class PosViewModel(application: Application) : AndroidViewModel(application) {
     // STAFF LOGIN / ROLE SWITCH
     fun switchUser(staffUser: StaffUser) {
         _currentUser.value = staffUser
+    }
+
+    fun saveStaffUser(user: StaffUser) {
+        viewModelScope.launch {
+            if (user.id.isBlank()) {
+                val newId = "U-${(System.currentTimeMillis() % 1000000).toString().padStart(6, '0')}"
+                repository.insertStaffUser(user.copy(id = newId))
+            } else {
+                repository.insertStaffUser(user)
+            }
+        }
+    }
+
+    fun deleteStaffUser(user: StaffUser) {
+        viewModelScope.launch {
+            repository.deleteStaffUser(user)
+            if (_currentUser.value.id == user.id) {
+                val remaining = staffUsers.value.filter { it.id != user.id }
+                if (remaining.isNotEmpty()) {
+                    _currentUser.value = remaining.first()
+                }
+            }
+        }
+    }
+
+    fun saveShiftSchedule(schedule: ShiftSchedule) {
+        viewModelScope.launch {
+            if (schedule.id == 0L) {
+                repository.insertShiftSchedule(schedule)
+            } else {
+                repository.updateShiftSchedule(schedule)
+            }
+        }
+    }
+
+    fun deleteShiftSchedule(schedule: ShiftSchedule) {
+        viewModelScope.launch {
+            repository.deleteShiftSchedule(schedule)
+        }
     }
 }

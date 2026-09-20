@@ -185,7 +185,7 @@ fun BrandSplashScreen(
             Spacer(modifier = Modifier.height(20.dp))
 
             Text(
-                text = "Versi 1.0 • Forapos",
+                text = "Versi 2.0 • Forapos",
                 fontSize = 12.sp,
                 fontWeight = FontWeight.Medium,
                 color = CrispWhite.copy(alpha = 0.75f)

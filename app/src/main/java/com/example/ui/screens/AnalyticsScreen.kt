@@ -20,9 +20,12 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AddPhotoAlternate
 import androidx.compose.material.icons.filled.Assessment
 import androidx.compose.material.icons.filled.AttachMoney
 import androidx.compose.material.icons.filled.Business
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.ReceiptLong
 import androidx.compose.material.icons.filled.TrendingUp
 import androidx.compose.material3.Button
@@ -32,6 +35,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Divider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
@@ -47,7 +51,16 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
+import android.widget.Toast
+import coil.compose.AsyncImage
+import java.io.File
+import java.io.FileOutputStream
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -58,6 +71,7 @@ import com.example.data.repository.PosRepository
 import com.example.ui.PosViewModel
 import com.example.ui.components.RecentSalesContent
 import com.example.ui.theme.CrispWhite
+import com.example.ui.theme.DangerRed
 import com.example.ui.theme.DarkSlate
 import com.example.ui.theme.DeepRoyalBlue
 import com.example.ui.theme.EmeraldDark
@@ -326,6 +340,27 @@ fun AnalyticsScreen(
                     var footer by remember { mutableStateOf(storeProfile.receiptFooter) }
                     var paperWidth by remember { mutableStateOf(storeProfile.printerPaperWidth) }
 
+                    val context = LocalContext.current
+                    val qrisPickerLauncher = rememberLauncherForActivityResult(
+                        contract = ActivityResultContracts.PickVisualMedia()
+                    ) { uri ->
+                        if (uri != null) {
+                            try {
+                                val destinationFile = File(context.filesDir, "store_qris_${System.currentTimeMillis()}.png")
+                                context.contentResolver.openInputStream(uri)?.use { input ->
+                                    FileOutputStream(destinationFile).use { output ->
+                                        input.copyTo(output)
+                                    }
+                                }
+                                viewModel.updateStoreQrisImage(destinationFile.absolutePath)
+                                Toast.makeText(context, "Foto QRIS Toko berhasil disimpan!", Toast.LENGTH_SHORT).show()
+                            } catch (e: Exception) {
+                                viewModel.updateStoreQrisImage(uri.toString())
+                                Toast.makeText(context, "Foto QRIS Toko tersimpan via URI", Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                    }
+
                     Column(
                         modifier = Modifier
                             .fillMaxSize()
@@ -391,12 +426,153 @@ fun AnalyticsScreen(
                                                 printerPaperWidth = paperWidth
                                             )
                                         )
+                                        Toast.makeText(context, "Pengaturan toko berhasil disimpan!", Toast.LENGTH_SHORT).show()
                                     },
                                     colors = ButtonDefaults.buttonColors(containerColor = EmeraldGreen),
                                     modifier = Modifier.fillMaxWidth(),
                                     shape = RoundedCornerShape(8.dp)
                                 ) {
                                     Text("Simpan Pengaturan Toko", fontWeight = FontWeight.Bold)
+                                }
+                            }
+                        }
+
+                        // QRIS Store Settings Card
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(top = 12.dp, bottom = 16.dp)
+                                .border(1.dp, Color(0xFFE2E8F0), RoundedCornerShape(10.dp)),
+                            colors = CardDefaults.cardColors(containerColor = CrispWhite)
+                        ) {
+                            Column(modifier = Modifier.padding(14.dp)) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(
+                                        Icons.Default.QrCodeScanner,
+                                        contentDescription = null,
+                                        tint = DeepRoyalBlue,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(
+                                        text = "Foto QRIS Toko (Pembayaran Digital)",
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 13.sp,
+                                        color = DarkSlate
+                                    )
+                                }
+
+                                Spacer(modifier = Modifier.height(6.dp))
+
+                                Text(
+                                    text = "Unggah foto barcode QRIS toko Anda. Saat kasir memilih metode QRIS, foto ini akan langsung ditampilkan agar pelanggan dapat scan barcode pembayaran secara instan.",
+                                    fontSize = 12.sp,
+                                    color = Color(0xFF64748B),
+                                    lineHeight = 16.sp
+                                )
+
+                                Spacer(modifier = Modifier.height(12.dp))
+
+                                val qrisUri = storeProfile.qrisImageUri
+                                val hasQrisImage = !qrisUri.isNullOrBlank() && (
+                                    qrisUri.startsWith("content://") ||
+                                    qrisUri.startsWith("http") ||
+                                    File(qrisUri).exists()
+                                )
+
+                                if (hasQrisImage) {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .height(200.dp)
+                                            .clip(RoundedCornerShape(8.dp))
+                                            .background(Color(0xFFF8FAFC))
+                                            .border(1.dp, Color(0xFFCBD5E1), RoundedCornerShape(8.dp)),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        AsyncImage(
+                                            model = if (qrisUri!!.startsWith("content://") || qrisUri.startsWith("http")) qrisUri else File(qrisUri),
+                                            contentDescription = "Foto QRIS Toko",
+                                            modifier = Modifier.fillMaxSize(),
+                                            contentScale = ContentScale.Fit
+                                        )
+                                    }
+
+                                    Spacer(modifier = Modifier.height(10.dp))
+
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        Button(
+                                            onClick = {
+                                                qrisPickerLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+                                            },
+                                            colors = ButtonDefaults.buttonColors(containerColor = DeepRoyalBlue),
+                                            shape = RoundedCornerShape(8.dp),
+                                            modifier = Modifier.weight(1f)
+                                        ) {
+                                            Icon(Icons.Default.AddPhotoAlternate, contentDescription = null, modifier = Modifier.size(16.dp))
+                                            Spacer(modifier = Modifier.width(6.dp))
+                                            Text("Ganti Foto QRIS", fontSize = 12.sp)
+                                        }
+
+                                        OutlinedButton(
+                                            onClick = {
+                                                viewModel.updateStoreQrisImage(null)
+                                                Toast.makeText(context, "Foto QRIS Toko dihapus.", Toast.LENGTH_SHORT).show()
+                                            },
+                                            shape = RoundedCornerShape(8.dp)
+                                        ) {
+                                            Icon(Icons.Default.Delete, contentDescription = null, tint = DangerRed, modifier = Modifier.size(16.dp))
+                                            Spacer(modifier = Modifier.width(4.dp))
+                                            Text("Hapus", color = DangerRed, fontSize = 12.sp)
+                                        }
+                                    }
+                                } else {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .height(130.dp)
+                                            .clip(RoundedCornerShape(8.dp))
+                                            .background(Color(0xFFF1F5F9))
+                                            .border(1.dp, Color(0xFFCBD5E1), RoundedCornerShape(8.dp)),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                            Icon(
+                                                Icons.Default.QrCodeScanner,
+                                                contentDescription = null,
+                                                tint = Color(0xFF94A3B8),
+                                                modifier = Modifier.size(36.dp)
+                                            )
+                                            Spacer(modifier = Modifier.height(6.dp))
+                                            Text(
+                                                text = "Belum ada foto QRIS toko",
+                                                fontSize = 12.sp,
+                                                color = Color(0xFF64748B),
+                                                fontWeight = FontWeight.Medium
+                                            )
+                                        }
+                                    }
+
+                                    Spacer(modifier = Modifier.height(10.dp))
+
+                                    Button(
+                                        onClick = {
+                                            qrisPickerLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+                                        },
+                                        colors = ButtonDefaults.buttonColors(containerColor = EmeraldGreen),
+                                        shape = RoundedCornerShape(8.dp),
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Icon(Icons.Default.AddPhotoAlternate, contentDescription = null, modifier = Modifier.size(16.dp))
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        Text("Unggah Foto QRIS Toko", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                    }
                                 }
                             }
                         }

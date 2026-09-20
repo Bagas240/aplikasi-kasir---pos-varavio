@@ -28,6 +28,8 @@ class TransactionLogRepository(private val posDao: PosDao) {
             orderId = order.orderId,
             timestamp = order.timestamp,
             cashierName = order.cashierName,
+            cashierRole = order.cashierRole,
+            shiftName = order.shiftName,
             customerName = order.customerName,
             paymentMethod = order.paymentMethod,
             subtotal = order.subtotal,

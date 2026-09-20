@@ -43,7 +43,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.clickable
 import com.example.data.model.Shift
+import com.example.data.model.ShiftSchedule
+import com.example.data.model.StaffUser
 import com.example.ui.theme.CrispWhite
 import com.example.ui.theme.DarkSlate
 import com.example.ui.theme.DeepRoyalBlue
@@ -53,9 +56,20 @@ import com.example.util.CurrencyFormatter
 @Composable
 fun OpenShiftDialog(
     cashierName: String,
-    onConfirm: (Double) -> Unit,
+    staffUsers: List<StaffUser> = emptyList(),
+    shiftSchedules: List<ShiftSchedule> = emptyList(),
+    onConfirmShift: (startingFloat: Double, cashierName: String, scheduleName: String, scheduleTime: String) -> Unit,
     onDismiss: () -> Unit
 ) {
+    val defaultSchedules = listOf(
+        ShiftSchedule(name = "Shift 1 (Pagi)", startTime = "07:00", endTime = "15:00"),
+        ShiftSchedule(name = "Shift 2 (Sore)", startTime = "15:00", endTime = "23:00"),
+        ShiftSchedule(name = "Shift 3 (Malam)", startTime = "23:00", endTime = "07:00")
+    )
+    val effectiveSchedules = if (shiftSchedules.isNotEmpty()) shiftSchedules else defaultSchedules
+    var selectedSchedule by remember { mutableStateOf(effectiveSchedules.first()) }
+
+    var selectedCashier by remember { mutableStateOf(cashierName) }
     var floatInput by remember { mutableStateOf("200000") }
     val isValidFloat = (floatInput.toDoubleOrNull() ?: -1.0) >= 0.0 && floatInput.isNotBlank()
 
@@ -65,7 +79,12 @@ fun OpenShiftDialog(
             Button(
                 onClick = {
                     val amount = floatInput.toDoubleOrNull() ?: 0.0
-                    onConfirm(amount)
+                    onConfirmShift(
+                        amount,
+                        selectedCashier,
+                        selectedSchedule.name,
+                        "${selectedSchedule.startTime} - ${selectedSchedule.endTime}"
+                    )
                 },
                 enabled = isValidFloat,
                 colors = ButtonDefaults.buttonColors(containerColor = DeepRoyalBlue),
@@ -95,18 +114,100 @@ fun OpenShiftDialog(
                 Spacer(modifier = Modifier.width(8.dp))
                 Column {
                     Text("Buka Kasir / Open Shift", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = DarkSlate)
-                    Text("Kasir: $cashierName", fontSize = 12.sp, color = Color(0xFF64748B))
+                    Text("Pilih Shift & Petugas Kasir", fontSize = 12.sp, color = Color(0xFF64748B))
                 }
             }
         },
         text = {
             Column {
-                Text(
-                    text = "Masukkan jumlah modal kas awal (cash float) di laci kasir:",
-                    fontSize = 13.sp,
-                    color = Color(0xFF475569)
-                )
+                // 1. Pilih Shift
+                Text("1. Pilih Jadwal Shift:", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = DarkSlate)
+                Spacer(modifier = Modifier.height(4.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    effectiveSchedules.take(3).forEach { sched ->
+                        val isSelected = sched.id == selectedSchedule.id || (sched.name == selectedSchedule.name)
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(if (isSelected) DeepRoyalBlue else Color(0xFFF1F5F9))
+                                .clickable { selectedSchedule = sched }
+                                .padding(vertical = 8.dp, horizontal = 6.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text(
+                                    sched.name,
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (isSelected) CrispWhite else DarkSlate
+                                )
+                                Text(
+                                    "${sched.startTime}-${sched.endTime}",
+                                    fontSize = 9.sp,
+                                    color = if (isSelected) CrispWhite.copy(alpha = 0.8f) else Color(0xFF64748B)
+                                )
+                            }
+                        }
+                    }
+                }
+
                 Spacer(modifier = Modifier.height(10.dp))
+
+                // 2. Pilih Kasir
+                if (staffUsers.isNotEmpty()) {
+                    Text("2. Kasir yang Bertugas:", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = DarkSlate)
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        staffUsers.take(4).forEach { staff ->
+                            val isSelected = staff.name == selectedCashier
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clip(RoundedCornerShape(6.dp))
+                                    .background(if (isSelected) Color(0xFFEFF6FF) else Color(0xFFF8FAFC))
+                                    .border(
+                                        width = 1.dp,
+                                        color = if (isSelected) DeepRoyalBlue else Color(0xFFE2E8F0),
+                                        shape = RoundedCornerShape(6.dp)
+                                    )
+                                    .clickable { selectedCashier = staff.name }
+                                    .padding(vertical = 6.dp, horizontal = 4.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Text(
+                                        staff.name.split(" ").firstOrNull() ?: staff.name,
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = if (isSelected) DeepRoyalBlue else DarkSlate
+                                    )
+                                    Text(
+                                        staff.role.label,
+                                        fontSize = 8.sp,
+                                        color = if (isSelected) DeepRoyalBlue else Color(0xFF64748B)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(10.dp))
+                }
+
+                // 3. Modal Kas Awal
+                Text(
+                    text = "3. Modal Kas Awal di Laci (Cash Float):",
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = DarkSlate
+                )
+                Spacer(modifier = Modifier.height(6.dp))
                 OutlinedTextField(
                     value = floatInput,
                     onValueChange = { floatInput = it.filter { ch -> ch.isDigit() } },
@@ -136,6 +237,21 @@ fun OpenShiftDialog(
                 }
             }
         }
+    )
+}
+
+@Composable
+fun OpenShiftDialog(
+    cashierName: String,
+    onConfirm: (Double) -> Unit,
+    onDismiss: () -> Unit
+) {
+    OpenShiftDialog(
+        cashierName = cashierName,
+        staffUsers = emptyList(),
+        shiftSchedules = emptyList(),
+        onConfirmShift = { amount, _, _, _ -> onConfirm(amount) },
+        onDismiss = onDismiss
     )
 }
 

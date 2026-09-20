@@ -10,6 +10,8 @@ import com.example.data.model.OrderEntity
 import com.example.data.model.Product
 import com.example.data.model.PurchaseOrder
 import com.example.data.model.Shift
+import com.example.data.model.ShiftSchedule
+import com.example.data.model.StaffUser
 import com.example.data.model.StockAdjustment
 import com.example.data.model.TransactionLog
 
@@ -22,9 +24,11 @@ import com.example.data.model.TransactionLog
         StockAdjustment::class,
         PurchaseOrder::class,
         Shift::class,
-        TransactionLog::class
+        TransactionLog::class,
+        StaffUser::class,
+        ShiftSchedule::class
     ],
-    version = 4,
+    version = 6,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {

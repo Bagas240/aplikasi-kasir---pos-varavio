@@ -142,10 +142,8 @@ class AuthPreferences(context: Context) {
             .putString(KEY_STORE_ADDRESS, address)
             .putString(KEY_STORE_PHONE, phone)
             .putString(KEY_STORE_LOGO, logoUri)
+            .putString(KEY_STORE_QRIS, qrisUri)
             .apply()
-        if (qrisUri != null) {
-            prefs.edit().putString(KEY_STORE_QRIS, qrisUri).apply()
-        }
     }
 
     fun getStaffUser(): StaffUser {

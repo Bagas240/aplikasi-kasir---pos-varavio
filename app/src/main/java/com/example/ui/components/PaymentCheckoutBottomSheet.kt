@@ -98,6 +98,15 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.model.Customer
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Fullscreen
+import androidx.compose.material.icons.filled.AddPhotoAlternate
 import com.example.data.model.PaymentMethod
 import com.example.data.model.StoreProfile
 import androidx.compose.ui.layout.ContentScale
@@ -132,7 +141,8 @@ data class DigitalPaymentOption(
     val subtitle: String,
     val icon: ImageVector,
     val badge: String? = null,
-    val iconBgColor: Color = VibrantBlue
+    val iconBgColor: Color = VibrantBlue,
+    val isAvailable: Boolean = false
 )
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
@@ -142,6 +152,7 @@ fun PaymentCheckoutBottomSheet(
     itemsCount: Int = 1,
     selectedCustomer: Customer? = null,
     storeProfile: StoreProfile = StoreProfile(),
+    onUpdateQrisImage: ((String?) -> Unit)? = null,
     onProcessPayment: (method: PaymentMethod, cashPaid: Double, splitMethod2: String, splitAmt1: Double, splitAmt2: Double) -> Unit,
     onDismiss: () -> Unit
 ) {
@@ -184,59 +195,96 @@ fun PaymentCheckoutBottomSheet(
         calculateChangeBreakdown(changeAmount)
     }
 
-    // Digital Payment Options List
+    // QRIS Fullscreen presentation state for handing to customer
+    var showFullScreenQris by remember { mutableStateOf(false) }
+
+    // QRIS Photo picker for store owner
+    val qrisPhotoPicker = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickVisualMedia(),
+        onResult = { uri ->
+            if (uri != null) {
+                try {
+                    val inputStream = context.contentResolver.openInputStream(uri)
+                    val destFile = File(context.filesDir, "store_qris_${System.currentTimeMillis()}.png")
+                    inputStream?.use { input ->
+                        destFile.outputStream().use { output ->
+                            input.copyTo(output)
+                        }
+                    }
+                    onUpdateQrisImage?.invoke(destFile.absolutePath)
+                    Toast.makeText(context, "Foto QRIS Toko berhasil disimpan!", Toast.LENGTH_SHORT).show()
+                } catch (e: Exception) {
+                    onUpdateQrisImage?.invoke(uri.toString())
+                    Toast.makeText(context, "Foto QRIS Toko berhasil diperbarui!", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+    )
+
+    // Digital Payment Options List: only QRIS is available, others marked "Not Available" and cannot be clicked
     val digitalPaymentOptions = listOf(
         DigitalPaymentOption(
             method = PaymentMethod.QRIS,
-            title = "QRIS Dinamis",
-            subtitle = "GoPay, OVO, DANA, ShopeePay, BCA, Livin",
+            title = "QRIS Toko (Aktif)",
+            subtitle = "GoPay, OVO, DANA, ShopeePay, BCA, Livin, Mandiri",
             icon = Icons.Default.QrCodeScanner,
-            badge = "Instan",
-            iconBgColor = DeepRoyalBlue
+            badge = "Tersedia",
+            iconBgColor = DeepRoyalBlue,
+            isAvailable = true
         ),
         DigitalPaymentOption(
             method = PaymentMethod.DEBIT_CARD,
             title = "Kartu Debit (EDC)",
             subtitle = "BCA, Mandiri, BRI, BNI, CIMB",
             icon = Icons.Default.CreditCard,
-            iconBgColor = VibrantBlue
+            badge = "Not Available",
+            iconBgColor = Color(0xFF94A3B8),
+            isAvailable = false
         ),
         DigitalPaymentOption(
             method = PaymentMethod.CREDIT_CARD,
             title = "Kartu Kredit",
             subtitle = "Visa, Mastercard, JCB, Amex",
             icon = Icons.Default.CreditCard,
-            iconBgColor = Color(0xFF7C3AED)
+            badge = "Not Available",
+            iconBgColor = Color(0xFF94A3B8),
+            isAvailable = false
         ),
         DigitalPaymentOption(
             method = PaymentMethod.E_WALLET,
-            title = "E-Wallet / Push Notif",
-            subtitle = "GoPay, DANA, OVO, ShopeePay direct",
+            title = "E-Wallet Direct",
+            subtitle = "GoPay, DANA, OVO, ShopeePay push notif",
             icon = Icons.Default.AccountBalanceWallet,
-            iconBgColor = Color(0xFF0284C7)
+            badge = "Not Available",
+            iconBgColor = Color(0xFF94A3B8),
+            isAvailable = false
         ),
         DigitalPaymentOption(
             method = PaymentMethod.BANK_TRANSFER,
             title = "Transfer Bank / VA",
             subtitle = "Virtual Account BCA, Mandiri, BRI",
             icon = Icons.Default.AccountBalance,
-            iconBgColor = Color(0xFF0D9488)
+            badge = "Not Available",
+            iconBgColor = Color(0xFF94A3B8),
+            isAvailable = false
         ),
         DigitalPaymentOption(
             method = PaymentMethod.SPLIT,
             title = "Split Payment",
             subtitle = "Kombinasi Tunai + Digital/Kartu",
             icon = Icons.Default.CallSplit,
-            badge = "Fleksibel",
-            iconBgColor = Color(0xFFEA580C)
+            badge = "Not Available",
+            iconBgColor = Color(0xFF94A3B8),
+            isAvailable = false
         ),
         DigitalPaymentOption(
             method = PaymentMethod.DEBT,
             title = "Kas Bon / Piutang",
-            subtitle = if (selectedCustomer != null) "Catat ke ${selectedCustomer.name}" else "Khusus Member Terdaftar",
+            subtitle = "Pencatatan kasbon pelanggan",
             icon = Icons.Default.Assignment,
-            badge = if (selectedCustomer != null) "Member" else "Perlu Member",
-            iconBgColor = if (selectedCustomer != null) Color(0xFFB45309) else SlateLight
+            badge = "Not Available",
+            iconBgColor = Color(0xFF94A3B8),
+            isAvailable = false
         )
     )
 
@@ -834,29 +882,112 @@ fun PaymentCheckoutBottomSheet(
 
                             Spacer(modifier = Modifier.height(14.dp))
 
-                            val hasCustomQris = !storeProfile.qrisImageUri.isNullOrBlank() && File(storeProfile.qrisImageUri!!).exists()
+                            val customQrisUri = storeProfile.qrisImageUri
+                            val hasCustomQris = !customQrisUri.isNullOrBlank() && (
+                                customQrisUri.startsWith("content://") ||
+                                customQrisUri.startsWith("http") ||
+                                File(customQrisUri).exists()
+                            )
 
                             if (hasCustomQris) {
                                 // Real uploaded QRIS image from store owner
-                                Box(
-                                    modifier = Modifier
-                                        .size(240.dp)
-                                        .clip(RoundedCornerShape(14.dp))
-                                        .background(CrispWhite)
-                                        .border(2.dp, Color(0xFFE2E8F0), RoundedCornerShape(14.dp))
-                                        .padding(6.dp),
-                                    contentAlignment = Alignment.Center
+                                Card(
+                                    shape = RoundedCornerShape(16.dp),
+                                    colors = CardDefaults.cardColors(containerColor = CrispWhite),
+                                    border = androidx.compose.foundation.BorderStroke(2.dp, Color(0xFFE2E8F0)),
+                                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
                                 ) {
-                                    AsyncImage(
-                                        model = File(storeProfile.qrisImageUri!!),
-                                        contentDescription = "Foto QRIS Toko",
-                                        modifier = Modifier
-                                            .fillMaxSize()
-                                            .clip(RoundedCornerShape(10.dp)),
-                                        contentScale = ContentScale.Fit
-                                    )
+                                    Column(
+                                        horizontalAlignment = Alignment.CenterHorizontally,
+                                        modifier = Modifier.padding(12.dp)
+                                    ) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(240.dp)
+                                                .clip(RoundedCornerShape(10.dp)),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            AsyncImage(
+                                                model = if (customQrisUri!!.startsWith("content://") || customQrisUri.startsWith("http")) customQrisUri else File(customQrisUri),
+                                                contentDescription = "Foto QRIS Toko",
+                                                modifier = Modifier.fillMaxSize(),
+                                                contentScale = ContentScale.Fit
+                                            )
+                                        }
+
+                                        Spacer(modifier = Modifier.height(8.dp))
+
+                                        Row(
+                                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            OutlinedButton(
+                                                onClick = { showFullScreenQris = true },
+                                                shape = RoundedCornerShape(8.dp),
+                                                contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 10.dp, vertical = 6.dp)
+                                            ) {
+                                                Icon(Icons.Default.Fullscreen, contentDescription = null, modifier = Modifier.size(16.dp))
+                                                Spacer(modifier = Modifier.width(4.dp))
+                                                Text("Perbesar ke Pelanggan", fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                                            }
+
+                                            OutlinedButton(
+                                                onClick = {
+                                                    qrisPhotoPicker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+                                                },
+                                                shape = RoundedCornerShape(8.dp),
+                                                contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 10.dp, vertical = 6.dp)
+                                            ) {
+                                                Icon(Icons.Default.AddPhotoAlternate, contentDescription = null, modifier = Modifier.size(16.dp))
+                                                Spacer(modifier = Modifier.width(4.dp))
+                                                Text("Ganti Foto QRIS", fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                                            }
+                                        }
+                                    }
                                 }
                             } else {
+                                // Banner informing store owner to upload their store QRIS photo
+                                Card(
+                                    shape = RoundedCornerShape(12.dp),
+                                    colors = CardDefaults.cardColors(containerColor = Color(0xFFEFF6FF)),
+                                    border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFBFDBFE)),
+                                    modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp)
+                                ) {
+                                    Column(
+                                        modifier = Modifier.padding(12.dp),
+                                        horizontalAlignment = Alignment.CenterHorizontally
+                                    ) {
+                                        Text(
+                                            text = "Foto QRIS Toko Belum Ditambahkan",
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 13.sp,
+                                            color = DeepRoyalBlue
+                                        )
+                                        Spacer(modifier = Modifier.height(4.dp))
+                                        Text(
+                                            text = "Unggah foto QRIS toko Anda agar langsung tampil di layar saat pelanggan ingin membayar via QRIS.",
+                                            fontSize = 11.sp,
+                                            color = Color(0xFF475569),
+                                            textAlign = TextAlign.Center,
+                                            lineHeight = 15.sp
+                                        )
+                                        Spacer(modifier = Modifier.height(10.dp))
+                                        Button(
+                                            onClick = {
+                                                qrisPhotoPicker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+                                            },
+                                            colors = ButtonDefaults.buttonColors(containerColor = DeepRoyalBlue),
+                                            shape = RoundedCornerShape(8.dp)
+                                        ) {
+                                            Icon(Icons.Default.AddPhotoAlternate, contentDescription = null, tint = CrispWhite, modifier = Modifier.size(16.dp))
+                                            Spacer(modifier = Modifier.width(6.dp))
+                                            Text("Unggah Foto QRIS Toko", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = CrispWhite)
+                                        }
+                                    }
+                                }
+
+                                Spacer(modifier = Modifier.height(12.dp))
+
                                 // Live generated QR canvas fallback
                                 val qrPayload = remember(grandTotal) {
                                     "00020101021226600016ID.CO.QRIS.WWW01189360000000000000005303360540${grandTotal.toInt()}5802ID"
@@ -867,14 +998,14 @@ fun PaymentCheckoutBottomSheet(
 
                                 Box(
                                     modifier = Modifier
-                                        .size(200.dp)
+                                        .size(190.dp)
                                         .clip(RoundedCornerShape(14.dp))
                                         .background(CrispWhite)
                                         .border(2.dp, Color(0xFFE2E8F0), RoundedCornerShape(14.dp))
                                         .padding(8.dp),
                                     contentAlignment = Alignment.Center
                                 ) {
-                                    Canvas(modifier = Modifier.size(184.dp)) {
+                                    Canvas(modifier = Modifier.size(174.dp)) {
                                         BarcodeGenerator.drawQrOnCanvas(this, qrMatrix, size.width, size.height)
                                     }
                                 }
@@ -930,8 +1061,37 @@ fun PaymentCheckoutBottomSheet(
                     // ==========================================
                     // DIGITAL PAYMENT SELECTION LIST & DETAILS
                     // ==========================================
+                    // Notice Banner for Unavailable Digital Methods
+                    Surface(
+                        shape = RoundedCornerShape(10.dp),
+                        color = Color(0xFFFEF2F2),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFFECACA)),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 10.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Info,
+                                contentDescription = null,
+                                tint = DangerRed,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "Metode kartu dan e-wallet eksternal saat ini belum tersedia (Not Available) dan tidak dapat diklik. Silakan gunakan QRIS Toko atau Tunai.",
+                                fontSize = 11.sp,
+                                color = DangerRed,
+                                lineHeight = 15.sp
+                            )
+                        }
+                    }
+
                     Text(
-                        text = "Pilih Saluran Pembayaran Lainnya:",
+                        text = "Daftar Saluran Pembayaran:",
                         fontSize = 13.sp,
                         fontWeight = FontWeight.SemiBold,
                         color = DarkSlate
@@ -945,26 +1105,29 @@ fun PaymentCheckoutBottomSheet(
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         digitalPaymentOptions.forEach { option ->
-                            val isSelected = selectedDigitalMethod == option.method
-                            val borderColor by animateColorAsState(
-                                targetValue = if (isSelected) DeepRoyalBlue else CardBorder,
-                                label = "border_color"
-                            )
-                            val containerColor by animateColorAsState(
-                                targetValue = if (isSelected) Color(0xFFF0F7FF) else CrispWhite,
-                                label = "container_color"
-                            )
+                            val isSelected = selectedDigitalMethod == option.method && option.isAvailable
+                            val isAvailable = option.isAvailable
 
                             Card(
                                 onClick = {
-                                    selectedDigitalMethod = option.method
-                                    qrisSimulatedSuccess = false
+                                    if (!isAvailable) {
+                                        Toast.makeText(
+                                            context,
+                                            "Metode '${option.title}' belum tersedia (Not Available). Silakan gunakan QRIS Toko atau Tunai.",
+                                            Toast.LENGTH_SHORT
+                                        ).show()
+                                    } else {
+                                        selectedDigitalMethod = option.method
+                                        qrisSimulatedSuccess = false
+                                    }
                                 },
                                 shape = RoundedCornerShape(12.dp),
-                                colors = CardDefaults.cardColors(containerColor = containerColor),
+                                colors = CardDefaults.cardColors(
+                                    containerColor = if (!isAvailable) Color(0xFFF8FAFC) else if (isSelected) Color(0xFFF0F7FF) else CrispWhite
+                                ),
                                 border = androidx.compose.foundation.BorderStroke(
                                     if (isSelected) 1.8.dp else 1.dp,
-                                    borderColor
+                                    if (!isAvailable) Color(0xFFE2E8F0) else if (isSelected) DeepRoyalBlue else CardBorder
                                 ),
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -985,7 +1148,7 @@ fun PaymentCheckoutBottomSheet(
                                             modifier = Modifier
                                                 .size(38.dp)
                                                 .background(
-                                                    if (isSelected) DeepRoyalBlue else option.iconBgColor.copy(alpha = 0.12f),
+                                                    if (!isAvailable) Color(0xFFF1F5F9) else if (isSelected) DeepRoyalBlue else option.iconBgColor.copy(alpha = 0.12f),
                                                     RoundedCornerShape(8.dp)
                                                 ),
                                             contentAlignment = Alignment.Center
@@ -993,7 +1156,7 @@ fun PaymentCheckoutBottomSheet(
                                             Icon(
                                                 imageVector = option.icon,
                                                 contentDescription = null,
-                                                tint = if (isSelected) CrispWhite else option.iconBgColor,
+                                                tint = if (!isAvailable) Color(0xFF94A3B8) else if (isSelected) CrispWhite else option.iconBgColor,
                                                 modifier = Modifier.size(20.dp)
                                             )
                                         }
@@ -1006,55 +1169,64 @@ fun PaymentCheckoutBottomSheet(
                                                     text = option.title,
                                                     fontSize = 13.sp,
                                                     fontWeight = FontWeight.Bold,
-                                                    color = if (isSelected) DeepRoyalBlue else DarkSlate
+                                                    color = if (!isAvailable) Color(0xFF64748B) else if (isSelected) DeepRoyalBlue else DarkSlate
                                                 )
                                                 if (option.badge != null) {
                                                     Spacer(modifier = Modifier.width(6.dp))
                                                     Surface(
                                                         shape = RoundedCornerShape(4.dp),
-                                                        color = if (isSelected) DeepRoyalBlue else SoftGrayBg,
+                                                        color = if (!isAvailable) Color(0xFFFEE2E2) else if (isSelected) DeepRoyalBlue else SoftGrayBg,
                                                         border = androidx.compose.foundation.BorderStroke(
                                                             0.5.dp,
-                                                            if (isSelected) DeepRoyalBlue else CardBorder
+                                                            if (!isAvailable) Color(0xFFFCA5A5) else if (isSelected) DeepRoyalBlue else CardBorder
                                                         )
                                                     ) {
                                                         Text(
                                                             text = option.badge,
                                                             fontSize = 9.sp,
                                                             fontWeight = FontWeight.Bold,
-                                                            color = if (isSelected) CrispWhite else SlateMuted,
-                                                            modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
+                                                            color = if (!isAvailable) DangerRed else if (isSelected) CrispWhite else SlateMuted,
+                                                            modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
                                                         )
                                                     }
                                                 }
                                             }
                                             Text(
-                                                text = option.subtitle,
+                                                text = if (!isAvailable) "Metode ini belum tersedia (Not Available)" else option.subtitle,
                                                 fontSize = 11.sp,
-                                                color = SlateMuted,
+                                                color = if (!isAvailable) Color(0xFF94A3B8) else SlateMuted,
                                                 maxLines = 1,
                                                 overflow = TextOverflow.Ellipsis
                                             )
                                         }
                                     }
 
-                                    // Radio / Check indicator
-                                    Box(
-                                        modifier = Modifier
-                                            .size(20.dp)
-                                            .border(
-                                                width = 2.dp,
-                                                color = if (isSelected) DeepRoyalBlue else SlateLight,
-                                                shape = CircleShape
-                                            ),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        if (isSelected) {
-                                            Box(
-                                                modifier = Modifier
-                                                    .size(10.dp)
-                                                    .background(DeepRoyalBlue, CircleShape)
-                                            )
+                                    // Trailing lock or radio indicator
+                                    if (!isAvailable) {
+                                        Icon(
+                                            imageVector = Icons.Default.Lock,
+                                            contentDescription = "Not Available",
+                                            tint = Color(0xFFCBD5E1),
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                    } else {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(20.dp)
+                                                .border(
+                                                    width = 2.dp,
+                                                    color = if (isSelected) DeepRoyalBlue else SlateLight,
+                                                    shape = CircleShape
+                                                ),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            if (isSelected) {
+                                                Box(
+                                                    modifier = Modifier
+                                                        .size(10.dp)
+                                                        .background(DeepRoyalBlue, CircleShape)
+                                                )
+                                            }
                                         }
                                     }
                                 }
@@ -1443,13 +1615,7 @@ fun PaymentCheckoutBottomSheet(
                 val isConfirmEnabled = when (selectedCategoryTab) {
                     0 -> isCashSufficient
                     1 -> true
-                    else -> {
-                        if (selectedDigitalMethod == PaymentMethod.DEBT) {
-                            selectedCustomer != null
-                        } else {
-                            true
-                        }
-                    }
+                    else -> false // All non-QRIS digital payment methods are disabled (Not Available)
                 }
 
                 Button(
@@ -1458,26 +1624,19 @@ fun PaymentCheckoutBottomSheet(
                             0 -> onProcessPayment(PaymentMethod.CASH, cashPaid, "", 0.0, 0.0)
                             1 -> onProcessPayment(PaymentMethod.QRIS, 0.0, "", 0.0, 0.0)
                             else -> {
-                                when (selectedDigitalMethod) {
-                                    PaymentMethod.SPLIT -> {
-                                        val part1 = splitCashAmtInput.toDoubleOrNull() ?: 0.0
-                                        val part2 = (grandTotal - part1).coerceAtLeast(0.0)
-                                        onProcessPayment(PaymentMethod.SPLIT, part1, splitDigitalMethod, part1, part2)
-                                    }
-                                    else -> {
-                                        onProcessPayment(selectedDigitalMethod, 0.0, "", 0.0, 0.0)
-                                    }
-                                }
+                                Toast.makeText(
+                                    context,
+                                    "Metode pembayaran ini belum tersedia. Silakan gunakan QRIS Toko atau Tunai.",
+                                    Toast.LENGTH_SHORT
+                                ).show()
                             }
                         }
                     },
                     enabled = isConfirmEnabled,
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = when (selectedCategoryTab) {
-                            0, 1 -> EmeraldGreen
-                            else -> DeepRoyalBlue
-                        },
-                        disabledContainerColor = SlateLight.copy(alpha = 0.4f)
+                        containerColor = if (selectedCategoryTab == 1) EmeraldGreen else DeepRoyalBlue,
+                        disabledContainerColor = Color(0xFFE2E8F0),
+                        disabledContentColor = SlateMuted
                     ),
                     shape = RoundedCornerShape(12.dp),
                     modifier = Modifier
@@ -1486,24 +1645,169 @@ fun PaymentCheckoutBottomSheet(
                         .testTag("confirm_payment_button")
                 ) {
                     Icon(
-                        imageVector = Icons.Default.Check,
+                        imageVector = if (selectedCategoryTab == 2) Icons.Default.Lock else Icons.Default.Check,
                         contentDescription = null,
-                        tint = CrispWhite,
+                        tint = if (isConfirmEnabled) CrispWhite else SlateMuted,
                         modifier = Modifier.size(18.dp)
                     )
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
                         text = when (selectedCategoryTab) {
                             0 -> if (changeAmount > 0) "Bayar (Kembali ${CurrencyFormatter.formatRupiah(changeAmount)})" else "Selesaikan Bayar Pas"
-                            1 -> "Konfirmasi QRIS Berhasil"
-                            else -> "Konfirmasi ${selectedDigitalMethod.label}"
+                            1 -> "Konfirmasi QRIS Selesai"
+                            else -> "Metode Belum Tersedia"
                         },
                         fontWeight = FontWeight.Bold,
                         fontSize = 13.sp,
-                        color = CrispWhite,
+                        color = if (isConfirmEnabled) CrispWhite else SlateMuted,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
+                }
+            }
+        }
+    }
+
+    // Full Screen QRIS Dialog for customer presentation
+    if (showFullScreenQris) {
+        val customQrisUri = storeProfile.qrisImageUri
+        val hasCustomQris = !customQrisUri.isNullOrBlank() && (
+            customQrisUri.startsWith("content://") ||
+            customQrisUri.startsWith("http") ||
+            File(customQrisUri).exists()
+        )
+
+        Dialog(
+            onDismissRequest = { showFullScreenQris = false },
+            properties = DialogProperties(usePlatformDefaultWidth = false)
+        ) {
+            Surface(
+                modifier = Modifier.fillMaxSize(),
+                color = CrispWhite
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.SpaceBetween
+                ) {
+                    // Header
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column {
+                            Text(
+                                text = storeProfile.storeName.ifBlank { "QRIS Pembayaran" },
+                                fontWeight = FontWeight.ExtraBold,
+                                fontSize = 20.sp,
+                                color = DarkSlate
+                            )
+                            Text(
+                                text = "Scan QRIS untuk menyelesaikan pembayaran",
+                                fontSize = 13.sp,
+                                color = SlateMuted
+                            )
+                        }
+                        IconButton(onClick = { showFullScreenQris = false }) {
+                            Icon(Icons.Default.Close, contentDescription = "Tutup", tint = DarkSlate)
+                        }
+                    }
+
+                    // QRIS Image / Canvas
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxWidth()
+                            .padding(vertical = 16.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        if (hasCustomQris) {
+                            AsyncImage(
+                                model = if (customQrisUri!!.startsWith("content://") || customQrisUri.startsWith("http")) customQrisUri else File(customQrisUri),
+                                contentDescription = "Foto QRIS Toko",
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .clip(RoundedCornerShape(16.dp))
+                                    .border(2.dp, Color(0xFFE2E8F0), RoundedCornerShape(16.dp)),
+                                contentScale = ContentScale.Fit
+                            )
+                        } else {
+                            val qrPayload = remember(grandTotal) {
+                                "00020101021226600016ID.CO.QRIS.WWW01189360000000000000005303360540${grandTotal.toInt()}5802ID"
+                            }
+                            val qrMatrix = remember(qrPayload) {
+                                BarcodeGenerator.encodeQrMatrix(qrPayload)
+                            }
+                            Box(
+                                modifier = Modifier
+                                    .size(280.dp)
+                                    .clip(RoundedCornerShape(16.dp))
+                                    .border(2.dp, Color(0xFFE2E8F0), RoundedCornerShape(16.dp))
+                                    .padding(12.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Canvas(modifier = Modifier.size(256.dp)) {
+                                    BarcodeGenerator.drawQrOnCanvas(this, qrMatrix, size.width, size.height)
+                                }
+                            }
+                        }
+                    }
+
+                    // Bottom Total & Actions
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            text = "Total Pembayaran",
+                            fontSize = 13.sp,
+                            color = SlateMuted,
+                            fontWeight = FontWeight.Medium
+                        )
+                        Text(
+                            text = CurrencyFormatter.formatRupiah(grandTotal),
+                            fontSize = 32.sp,
+                            fontWeight = FontWeight.Black,
+                            color = DeepRoyalBlue
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        Button(
+                            onClick = {
+                                showFullScreenQris = false
+                                onProcessPayment(PaymentMethod.QRIS, 0.0, "", 0.0, 0.0)
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = EmeraldGreen),
+                            shape = RoundedCornerShape(14.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(52.dp)
+                        ) {
+                            Icon(Icons.Default.CheckCircle, contentDescription = null, tint = CrispWhite, modifier = Modifier.size(22.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "Pelanggan Sudah Bayar (Selesaikan)",
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = CrispWhite
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        OutlinedButton(
+                            onClick = { showFullScreenQris = false },
+                            shape = RoundedCornerShape(14.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(44.dp)
+                        ) {
+                            Text("Kembali ke Kasir", color = DarkSlate, fontWeight = FontWeight.SemiBold)
+                        }
+                    }
                 }
             }
         }

@@ -44,7 +44,11 @@ object EscPosPrinterHelper {
 
         sb.appendLine(twoCols("No. Struk :", order.orderId))
         sb.appendLine(twoCols("Waktu     :", CurrencyFormatter.formatDate(order.timestamp)))
-        sb.appendLine(twoCols("Kasir     :", order.cashierName))
+        val cashierInfo = if (order.cashierRole.isNotBlank()) "${order.cashierName} (${order.cashierRole})" else order.cashierName
+        sb.appendLine(twoCols("Kasir     :", cashierInfo))
+        if (order.shiftName.isNotBlank()) {
+            sb.appendLine(twoCols("Shift     :", order.shiftName))
+        }
         sb.appendLine(twoCols("Pelanggan :", order.customerName))
         sb.appendLine(line())
 
