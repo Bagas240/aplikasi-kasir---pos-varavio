@@ -284,10 +284,10 @@ data class TransactionLog(
 )
 
 data class StoreProfile(
-    val storeName: String = "SENTOSA RETAIL & POS",
+    val storeName: String = "VORAVIO MART",
     val address: String = "Jl. Thamrin No. 88, Jakarta Pusat",
     val phone: String = "+62 812-3456-7890",
-    val instagram: String = "@sentosapos.id",
+    val instagram: String = "@voraviopos.id",
     val logoUri: String? = null,
     val qrisImageUri: String? = null,
     val receiptHeader: String = "STRUK PEMBELIAN RESMI",

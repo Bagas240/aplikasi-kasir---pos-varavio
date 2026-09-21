@@ -22,6 +22,6 @@ dependencyResolutionManagement {
   }
 }
 
-rootProject.name = "Forapos"
+rootProject.name = "Voravio"
 
 include(":app")

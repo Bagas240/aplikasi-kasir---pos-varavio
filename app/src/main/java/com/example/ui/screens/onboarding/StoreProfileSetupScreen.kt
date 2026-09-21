@@ -83,7 +83,7 @@ fun StoreProfileSetupScreen(
 ) {
     val context = LocalContext.current
 
-    var storeName by remember { mutableStateOf(authPreferences.storeName.ifBlank { "SENTOSA RETAIL & POS" }) }
+    var storeName by remember { mutableStateOf(authPreferences.storeName.ifBlank { "VORAVIO MART" }) }
     var storeAddress by remember { mutableStateOf(authPreferences.storeAddress.ifBlank { "Jl. Thamrin No. 88, Jakarta Pusat" }) }
     var storePhone by remember { mutableStateOf(authPreferences.storePhone.ifBlank { "+62 812-3456-7890" }) }
     var storeLogoUri by remember { mutableStateOf(authPreferences.storeLogoUri) }

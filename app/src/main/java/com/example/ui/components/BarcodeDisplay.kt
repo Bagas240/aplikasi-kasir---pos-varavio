@@ -73,7 +73,7 @@ fun BarcodeDisplay(
                 barcodeValue.ifBlank { "PRD-000001" }
             }
             BarcodeFormat.QR_CODE -> {
-                barcodeValue.ifBlank { "FORAPOS-CODE" }
+                barcodeValue.ifBlank { "VORAVIO-CODE" }
             }
         }
     }

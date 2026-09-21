@@ -1,12 +1,7 @@
 *.iml
 .gradle
 /local.properties
-/.idea/caches
-/.idea/libraries
-/.idea/modules.xml
-/.idea/workspace.xml
-/.idea/navEditor.xml
-/.idea/assetWizardSettings.xml
+/.idea
 .DS_Store
 /build
 /captures
@@ -14,11 +9,20 @@
 .cxx
 local.properties
 
-# Secrets and environment
+# Secrets, Environment & API Keys (CRITICAL)
+*.env
 .env
+app/.env
+*.keystore
+*.jks
 debug.keystore
 debug.keystore.base64
+google-services.json
 
 # Build outputs
+**/build/
 /app/build
 /.build-outputs
+*.apk
+*.aab
+

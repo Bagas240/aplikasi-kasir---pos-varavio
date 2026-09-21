@@ -77,7 +77,14 @@ class AuthPreferences(context: Context) {
         set(value) = prefs.edit().putString(KEY_AUTH_PIN, value).apply()
 
     var storeName: String
-        get() = prefs.getString(KEY_STORE_NAME, "SENTOSA RETAIL & POS") ?: "SENTOSA RETAIL & POS"
+        get() {
+            val stored = prefs.getString(KEY_STORE_NAME, "VORAVIO MART") ?: "VORAVIO MART"
+            if (stored.isBlank() || stored.contains("SENTOSA", ignoreCase = true) || stored.contains("Forapos", ignoreCase = true)) {
+                prefs.edit().putString(KEY_STORE_NAME, "VORAVIO MART").apply()
+                return "VORAVIO MART"
+            }
+            return stored
+        }
         set(value) = prefs.edit().putString(KEY_STORE_NAME, value).apply()
 
     var storeAddress: String
@@ -101,7 +108,7 @@ class AuthPreferences(context: Context) {
         set(value) = prefs.edit().putBoolean(KEY_TUTORIAL_COMPLETED, value).apply()
 
     fun setupInitialAccountAndStore(store: String, user: String, userPin: String) {
-        val sName = store.ifBlank { "SENTOSA RETAIL & POS" }.trim()
+        val sName = store.ifBlank { "VORAVIO MART" }.trim()
         val uName = user.ifBlank { "admin" }.trim()
         val pCode = userPin.ifBlank { "1234" }.trim()
         prefs.edit()

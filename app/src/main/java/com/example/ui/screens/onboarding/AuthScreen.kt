@@ -58,6 +58,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
+import com.example.ui.components.VoravioLogo
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -87,7 +88,7 @@ fun AuthScreen(
     var loginError by remember { mutableStateOf<String?>(null) }
 
     // Quick Setup Form State (Nama Toko + Username + PIN)
-    var setupStoreName by remember { mutableStateOf(authPreferences.storeName.ifBlank { "Sentosa Retail & POS" }) }
+    var setupStoreName by remember { mutableStateOf(authPreferences.storeName.ifBlank { "Voravio Mart" }) }
     var setupUsername by remember { mutableStateOf(authPreferences.username.ifBlank { "admin" }) }
     var setupPin by remember { mutableStateOf(if (hasExistingAccount) authPreferences.pin else "1234") }
     var showSetupPin by remember { mutableStateOf(false) }
@@ -113,33 +114,24 @@ fun AuthScreen(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             // Header Logo & Title
-            Box(
-                modifier = Modifier
-                    .size(60.dp)
-                    .clip(CircleShape)
-                    .background(DeepRoyalBlue),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Default.PointOfSale,
-                    contentDescription = null,
-                    tint = CrispWhite,
-                    modifier = Modifier.size(32.dp)
-                )
-            }
+            VoravioLogo(
+                size = 64.dp,
+                onDarkBackground = false
+            )
 
             Spacer(modifier = Modifier.height(12.dp))
 
             Text(
-                text = "POS Kasir & Toko Lokal",
-                fontSize = 22.sp,
+                text = "Voravio POS",
+                fontSize = 26.sp,
                 fontWeight = FontWeight.ExtraBold,
                 color = DarkSlate
             )
 
             Text(
-                text = "Cukup Nama Toko, Username, & PIN — Tanpa Password Rumit",
-                fontSize = 12.sp,
+                text = "Sistem Kasir & Manajemen Toko Pintar",
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Medium,
                 color = Color(0xFF64748B),
                 textAlign = TextAlign.Center
             )
@@ -206,7 +198,7 @@ fun AuthScreen(
                             Icon(Icons.Default.Key, contentDescription = null, tint = DeepRoyalBlue, modifier = Modifier.size(20.dp))
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
-                                text = "Masuk dengan PIN",
+                                text = "Masuk ke Voravio POS",
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 16.sp,
                                 color = DarkSlate
@@ -402,7 +394,7 @@ fun AuthScreen(
                                 setupError = null
                             },
                             label = { Text("1. Nama Toko") },
-                            placeholder = { Text("Contoh: Sentosa Retail & Mart") },
+                            placeholder = { Text("Contoh: Voravio Mart") },
                             leadingIcon = { Icon(Icons.Default.Storefront, contentDescription = null, tint = VibrantBlue) },
                             singleLine = true,
                             shape = RoundedCornerShape(10.dp),

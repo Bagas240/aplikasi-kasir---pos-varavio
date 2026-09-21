@@ -68,6 +68,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -80,6 +81,7 @@ import com.example.ui.PosTab
 import com.example.ui.PosViewModel
 import com.example.ui.components.StaffPinDialog
 import com.example.ui.components.ThermalReceiptDialog
+import com.example.ui.components.VoravioLogo
 import com.example.ui.screens.AnalyticsScreen
 import com.example.ui.screens.BarcodeCenterScreen
 import com.example.ui.screens.CashierScreen
@@ -97,7 +99,7 @@ import com.example.ui.theme.DarkSlate
 import com.example.ui.theme.DeepRoyalBlue
 import com.example.ui.theme.EmeraldDark
 import com.example.ui.theme.EmeraldGreen
-import com.example.ui.theme.MyApplicationTheme
+import com.example.ui.theme.VoravioTheme
 import com.example.ui.theme.SoftGrayBg
 import com.example.ui.theme.VibrantBlue
 
@@ -106,7 +108,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            MyApplicationTheme {
+            VoravioTheme {
                 PosMasterApp()
             }
         }
@@ -252,22 +254,19 @@ fun PosMasterApp(viewModel: PosViewModel = viewModel()) {
                         header = {
                             Column(
                                 horizontalAlignment = Alignment.CenterHorizontally,
-                                modifier = Modifier.padding(top = 8.dp, bottom = 4.dp)
+                                modifier = Modifier.padding(top = 10.dp, bottom = 6.dp)
                             ) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(38.dp)
-                                        .background(DeepRoyalBlue, CircleShape),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Icon(Icons.Default.PointOfSale, contentDescription = null, tint = CrispWhite, modifier = Modifier.size(20.dp))
-                                }
-                                Spacer(modifier = Modifier.height(2.dp))
+                                VoravioLogo(
+                                    size = 36.dp,
+                                    onDarkBackground = false
+                                )
+                                Spacer(modifier = Modifier.height(4.dp))
                                 Text(
-                                    text = "POS",
-                                    fontWeight = FontWeight.ExtraBold,
-                                    fontSize = 11.sp,
-                                    color = DeepRoyalBlue
+                                    text = "VORAVIO",
+                                    fontWeight = FontWeight.Black,
+                                    fontSize = 10.sp,
+                                    color = DeepRoyalBlue,
+                                    letterSpacing = 0.5.sp
                                 )
                             }
                         }
@@ -326,11 +325,21 @@ fun PosMasterApp(viewModel: PosViewModel = viewModel()) {
                                     .padding(horizontal = 14.dp)
                             ) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
+                                    VoravioLogo(size = 26.dp, onDarkBackground = true)
+                                    Spacer(modifier = Modifier.width(8.dp))
                                     Text(
-                                        text = storeProfile.storeName,
-                                        fontWeight = FontWeight.Bold,
+                                        text = "Voravio POS",
+                                        fontWeight = FontWeight.ExtraBold,
                                         fontSize = 15.sp,
                                         color = CrispWhite
+                                    )
+                                    Text(
+                                        text = " • ${storeProfile.storeName}",
+                                        fontWeight = FontWeight.Normal,
+                                        fontSize = 13.sp,
+                                        color = CrispWhite.copy(alpha = 0.85f),
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
                                     )
                                     Spacer(modifier = Modifier.width(10.dp))
                                     Box(
@@ -427,30 +436,47 @@ fun PosMasterApp(viewModel: PosViewModel = viewModel()) {
                                 Row(
                                     verticalAlignment = Alignment.CenterVertically,
                                     horizontalArrangement = Arrangement.SpaceBetween,
-                                    modifier = Modifier.fillMaxWidth().padding(end = 12.dp)
+                                    modifier = Modifier.fillMaxWidth().padding(end = 6.dp)
                                 ) {
-                                    Column {
-                                        Text(
-                                            text = storeProfile.storeName,
-                                            fontWeight = FontWeight.Bold,
-                                            fontSize = 16.sp,
-                                            color = CrispWhite
-                                        )
-                                        Row(verticalAlignment = Alignment.CenterVertically) {
-                                            Box(
-                                                modifier = Modifier
-                                                    .size(7.dp)
-                                                    .background(
-                                                        if (activeShift != null) EmeraldGreen else Color(0xFFF87171),
-                                                        CircleShape
-                                                    )
-                                            )
-                                            Spacer(modifier = Modifier.width(5.dp))
-                                            Text(
-                                                text = if (activeShift != null) "Shift Kasir: Aktif" else "Shift: Kasir Tutup",
-                                                fontSize = 11.sp,
-                                                color = CrispWhite.copy(alpha = 0.85f)
-                                            )
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        modifier = Modifier.weight(1f, fill = false)
+                                    ) {
+                                        VoravioLogo(size = 34.dp, onDarkBackground = true)
+                                        Spacer(modifier = Modifier.width(9.dp))
+                                        Column {
+                                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                                Text(
+                                                    text = "Voravio POS",
+                                                    fontWeight = FontWeight.ExtraBold,
+                                                    fontSize = 16.sp,
+                                                    color = CrispWhite
+                                                )
+                                                Text(
+                                                    text = " • ${storeProfile.storeName}",
+                                                    fontWeight = FontWeight.Medium,
+                                                    fontSize = 12.sp,
+                                                    color = CrispWhite.copy(alpha = 0.85f),
+                                                    maxLines = 1,
+                                                    overflow = TextOverflow.Ellipsis
+                                                )
+                                            }
+                                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                                Box(
+                                                    modifier = Modifier
+                                                        .size(7.dp)
+                                                        .background(
+                                                            if (activeShift != null) EmeraldGreen else Color(0xFFF87171),
+                                                            CircleShape
+                                                        )
+                                                )
+                                                Spacer(modifier = Modifier.width(5.dp))
+                                                Text(
+                                                    text = if (activeShift != null) "Shift Kasir: Aktif" else "Shift: Kasir Tutup",
+                                                    fontSize = 11.sp,
+                                                    color = CrispWhite.copy(alpha = 0.85f)
+                                                )
+                                            }
                                         }
                                     }
 

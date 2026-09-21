@@ -2,7 +2,7 @@ package com.example.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-// Forapos Design Tokens - Solid Light Blue Base (No Gradients)
+// Voravio Design Tokens - Solid Light Blue Base (No Gradients)
 val LightBluePrimary = Color(0xFF3B82F6) // Solid Light Blue #3B82F6
 val LightBlueAccent = Color(0xFF60A5FA)  // Solid Light Blue Accent #60A5FA
 val LightBluePastel = Color(0xFFDBEAFE)  // Light Blue Pastel #DBEAFE

@@ -333,7 +333,7 @@ object BarcodeGenerator {
                 baseDigits + check
             }
             BarcodeFormat.QR_CODE -> {
-                "FORAPOS:PROD:$productId"
+                "VORAVIO:PROD:$productId"
             }
             BarcodeFormat.CODE_128 -> {
                 val safePrefix = customPrefix.filter { it.isLetterOrDigit() }.ifBlank { "PRD" }
