@@ -118,25 +118,7 @@ fun BrandSplashScreen(
                 )
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
-
-            // Subtitle Tag Badge
-            Surface(
-                color = CrispWhite.copy(alpha = 0.18f),
-                shape = RoundedCornerShape(20.dp),
-                border = androidx.compose.foundation.BorderStroke(1.dp, CrispWhite.copy(alpha = 0.35f))
-            ) {
-                Text(
-                    text = "SMART POINT OF SALE",
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = CrispWhite,
-                    letterSpacing = 1.5.sp,
-                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp)
-                )
-            }
-
-            Spacer(modifier = Modifier.height(14.dp))
+            Spacer(modifier = Modifier.height(20.dp))
 
             // App Brand Name & Subtitle
             Text(
@@ -147,29 +129,17 @@ fun BrandSplashScreen(
                 letterSpacing = 3.sp
             )
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(10.dp))
 
             Text(
-                text = "Sistem Kasir & Manajemen Toko Pintar\nPenjualan, Barcode Scanner, Stok & Laporan",
+                text = "Sistem Kasir & Manajemen Toko Pintar",
                 fontSize = 14.sp,
                 color = CrispWhite.copy(alpha = 0.92f),
                 textAlign = TextAlign.Center,
                 lineHeight = 21.sp
             )
 
-            Spacer(modifier = Modifier.height(24.dp))
-
-            // Quick Highlights Pills
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                SplashFeaturePill(label = "⚡ Kasir Cepat")
-                SplashFeaturePill(label = "📦 Stok & Barcode")
-                SplashFeaturePill(label = "📊 Laporan")
-            }
-
-            Spacer(modifier = Modifier.height(40.dp))
+            Spacer(modifier = Modifier.height(36.dp))
 
             // Initialization Action CTA
             Button(
@@ -207,21 +177,5 @@ fun BrandSplashScreen(
                 color = CrispWhite.copy(alpha = 0.8f)
             )
         }
-    }
-}
-
-@Composable
-private fun SplashFeaturePill(label: String) {
-    Surface(
-        color = CrispWhite.copy(alpha = 0.14f),
-        shape = RoundedCornerShape(12.dp)
-    ) {
-        Text(
-            text = label,
-            fontSize = 11.sp,
-            fontWeight = FontWeight.SemiBold,
-            color = CrispWhite,
-            modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
-        )
     }
 }
