@@ -19,32 +19,40 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up JDK 17
+      - name: Set up JDK 21
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
-          java-version: '17'
+          java-version: '21'
           cache: 'gradle'
 
-      - name: Prepare Secrets Configuration
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Accept Android SDK Licenses
+        run: |
+          yes | sdkmanager --licenses || true
+
+      - name: Prepare Secrets and Keystore
         run: |
           touch .env
           touch .env.example
           touch app/.env
           touch app/.env.example
+          if [ ! -f "debug.keystore" ]; then
+            keytool -genkey -v -keystore debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
+          fi
 
-      - name: Setup Gradle 9.3.1
-        uses: gradle/actions/setup-gradle@v4
-        with:
-          gradle-version: '9.3.1'
+      - name: Make Gradle wrapper executable
+        run: chmod +x ./gradlew
 
-      - name: Run Unit Tests & Lint
+      - name: Run Unit Tests
         run: |
-          gradle testDebugUnitTest --stacktrace
+          ./gradlew testDebugUnitTest --stacktrace
 
       - name: Build Debug APK
         run: |
-          gradle assembleDebug --stacktrace
+          ./gradlew assembleDebug --stacktrace
 
       - name: Upload Test Reports
         if: always()
