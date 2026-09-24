@@ -1,5 +1,6 @@
 package com.example.data.model
 
+import androidx.compose.runtime.Immutable
 import androidx.room.Entity
 import androidx.room.Index
 import androidx.room.PrimaryKey
@@ -10,6 +11,7 @@ enum class UserRole(val label: String) {
     CASHIER("Kasir")
 }
 
+@Immutable
 @Entity(tableName = "staff_users")
 data class StaffUser(
     @PrimaryKey
@@ -22,6 +24,7 @@ data class StaffUser(
     val createdAt: Long = System.currentTimeMillis()
 )
 
+@Immutable
 @Entity(tableName = "shift_schedules")
 data class ShiftSchedule(
     @PrimaryKey(autoGenerate = true)
@@ -33,6 +36,7 @@ data class ShiftSchedule(
     val notes: String = ""
 )
 
+@Immutable
 data class ProductVariant(
     val id: String,
     val name: String,
@@ -41,11 +45,14 @@ data class ProductVariant(
     val stock: Int = 10
 )
 
+@Immutable
 @Entity(
     tableName = "products",
     indices = [
         Index(value = ["barcode"]),
-        Index(value = ["sku"])
+        Index(value = ["sku"]),
+        Index(value = ["category"]),
+        Index(value = ["isActive"])
     ]
 )
 data class Product(
@@ -76,6 +83,7 @@ data class Product(
     val isOutOfStock: Boolean get() = stock <= 0
 }
 
+@Immutable
 data class CartItem(
     val product: Product,
     val selectedVariant: ProductVariant? = null,
@@ -128,6 +136,7 @@ enum class OrderStatus {
     UNPAID
 }
 
+@Immutable
 @Entity(
     tableName = "orders",
     indices = [
@@ -166,6 +175,7 @@ data class OrderEntity(
     val cashierRole: String = "Kasir"
 )
 
+@Immutable
 @Entity(tableName = "customers")
 data class Customer(
     @PrimaryKey(autoGenerate = true)
@@ -180,6 +190,7 @@ data class Customer(
     val updatedAt: Long = System.currentTimeMillis()
 )
 
+@Immutable
 @Entity(tableName = "customer_debts")
 data class CustomerDebt(
     @PrimaryKey(autoGenerate = true)
@@ -194,6 +205,7 @@ data class CustomerDebt(
     val createdAt: Long = System.currentTimeMillis()
 )
 
+@Immutable
 @Entity(tableName = "stock_adjustments")
 data class StockAdjustment(
     @PrimaryKey(autoGenerate = true)
@@ -209,6 +221,7 @@ data class StockAdjustment(
     val timestamp: Long = System.currentTimeMillis()
 )
 
+@Immutable
 @Entity(tableName = "purchase_orders")
 data class PurchaseOrder(
     @PrimaryKey(autoGenerate = true)
@@ -223,6 +236,7 @@ data class PurchaseOrder(
     val createdAt: Long = System.currentTimeMillis()
 )
 
+@Immutable
 @Entity(
     tableName = "shifts",
     indices = [
@@ -252,6 +266,7 @@ data class Shift(
     val notes: String = ""
 )
 
+@Immutable
 @Entity(
     tableName = "transaction_logs",
     indices = [
@@ -283,6 +298,7 @@ data class TransactionLog(
     val notes: String = ""
 )
 
+@Immutable
 data class StoreProfile(
     val storeName: String = "VORAVIO MART",
     val address: String = "Jl. Thamrin No. 88, Jakarta Pusat",

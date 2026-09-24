@@ -92,6 +92,7 @@ import com.example.data.model.Product
 import com.example.ui.PosViewModel
 import com.example.ui.components.BarcodeScannerView
 import com.example.ui.components.CameraView
+import com.example.ui.components.ExportSalesReportDialog
 import com.example.ui.components.PaymentCheckoutBottomSheet
 import com.example.ui.components.RecentSalesDialog
 import com.example.ui.theme.CrispWhite
@@ -127,6 +128,7 @@ fun CashierScreen(
     val serviceEnabled by viewModel.serviceEnabled.collectAsStateWithLifecycle()
     val storeProfile by viewModel.storeProfile.collectAsStateWithLifecycle()
     val recentSales by viewModel.recentSales.collectAsStateWithLifecycle()
+    val completedOrders by viewModel.completedOrders.collectAsStateWithLifecycle()
 
     LaunchedEffect(scanFeedback) {
         if (scanFeedback != null) {
@@ -144,6 +146,7 @@ fun CashierScreen(
     var holdNoteInput by remember { mutableStateOf("") }
     var showHoldPrompt by remember { mutableStateOf(false) }
     var showRecentSalesDialog by remember { mutableStateOf(false) }
+    var showExportCsvDialog by remember { mutableStateOf(false) }
 
     // Item note / discount modal state
     var itemToEdit by remember { mutableStateOf<CartItem?>(null) }
@@ -162,6 +165,9 @@ fun CashierScreen(
             matchCategory && matchSearch
         }
     }
+
+    val cartQtyMap = remember(cartItems) { cartItems.associate { it.product.id to it.quantity } }
+    val cartItemMap = remember(cartItems) { cartItems.associateBy { it.product.id } }
 
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
@@ -185,6 +191,8 @@ fun CashierScreen(
                             lastScannedCode = lastScannedBarcode,
                             onClose = { viewModel.toggleScanner(false) },
                             sampleCodes = products.take(5).map { it.barcode },
+                            products = products,
+                            onBarcodeResult = { result -> viewModel.onScanBarcodeResult(result) },
                             modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
                         )
                     }
@@ -382,13 +390,15 @@ fun CashierScreen(
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         items(filteredProducts, key = { it.id }) { product ->
-                            val inCartItem = cartItems.find { it.product.id == product.id }
+                            val qty = cartQtyMap[product.id] ?: 0
                             ProductGridCard(
                                 product = product,
-                                cartQuantity = inCartItem?.quantity ?: 0,
+                                cartQuantity = qty,
                                 onAddToCart = { viewModel.addToCart(product) },
                                 onMinus = {
-                                    if (inCartItem != null) viewModel.updateCartItemQuantity(inCartItem, -1)
+                                    cartItemMap[product.id]?.let { item ->
+                                        viewModel.updateCartItemQuantity(item, -1)
+                                    }
                                 }
                             )
                         }
@@ -431,6 +441,8 @@ fun CashierScreen(
                         lastScannedCode = lastScannedBarcode,
                         onClose = { viewModel.toggleScanner(false) },
                         sampleCodes = products.take(5).map { it.barcode },
+                        products = products,
+                        onBarcodeResult = { result -> viewModel.onScanBarcodeResult(result) },
                         modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
                     )
                 }
@@ -638,13 +650,15 @@ fun CashierScreen(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     items(filteredProducts, key = { it.id }) { product ->
-                        val inCartItem = cartItems.find { it.product.id == product.id }
+                        val qty = cartQtyMap[product.id] ?: 0
                         ProductGridCard(
                             product = product,
-                            cartQuantity = inCartItem?.quantity ?: 0,
+                            cartQuantity = qty,
                             onAddToCart = { viewModel.addToCart(product) },
                             onMinus = {
-                                if (inCartItem != null) viewModel.updateCartItemQuantity(inCartItem, -1)
+                                cartItemMap[product.id]?.let { item ->
+                                    viewModel.updateCartItemQuantity(item, -1)
+                                }
                             }
                         )
                     }
@@ -1114,7 +1128,20 @@ fun CashierScreen(
     if (showRecentSalesDialog) {
         RecentSalesDialog(
             recentSales = recentSales,
-            onDismiss = { showRecentSalesDialog = false }
+            onDismiss = { showRecentSalesDialog = false },
+            onExportClick = {
+                showRecentSalesDialog = false
+                showExportCsvDialog = true
+            }
+        )
+    }
+
+    if (showExportCsvDialog) {
+        ExportSalesReportDialog(
+            orders = completedOrders,
+            products = products,
+            storeProfile = storeProfile,
+            onDismiss = { showExportCsvDialog = false }
         )
     }
 }

@@ -69,6 +69,11 @@ import com.example.data.model.StoreProfile
 import com.example.data.model.UserRole
 import com.example.data.repository.PosRepository
 import com.example.ui.PosViewModel
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.material.icons.filled.FileDownload
+import androidx.compose.material.icons.filled.TableChart
+import androidx.compose.ui.platform.testTag
+import com.example.ui.components.ExportSalesReportDialog
 import com.example.ui.components.RecentSalesContent
 import com.example.ui.theme.CrispWhite
 import com.example.ui.theme.DangerRed
@@ -92,6 +97,7 @@ fun AnalyticsScreen(
     val storeProfile by viewModel.storeProfile.collectAsStateWithLifecycle()
 
     var activeTab by remember { mutableStateOf(0) } // 0: Ringkasan Bisnis, 1: Riwayat Transaksi, 2: Profil & Printer
+    var showExportDialog by remember { mutableStateOf(false) }
 
     val totalGrossSales = remember(completedOrders) {
         completedOrders.sumOf { it.grandTotal }
@@ -135,17 +141,22 @@ fun AnalyticsScreen(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Column {
+                Column(modifier = Modifier.weight(1f)) {
                     Text("Laporan Keuangan & Toko", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = DarkSlate)
                     Text("Analitik omset, laba rugi & preferensi struk", fontSize = 12.sp, color = Color(0xFF64748B))
                 }
-                Box(
-                    modifier = Modifier
-                        .size(36.dp)
-                        .background(Color(0xFFEFF6FF), CircleShape),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(Icons.Default.Assessment, contentDescription = null, tint = DeepRoyalBlue)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Button(
+                        onClick = { showExportDialog = true },
+                        colors = ButtonDefaults.buttonColors(containerColor = DeepRoyalBlue),
+                        shape = RoundedCornerShape(8.dp),
+                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp),
+                        modifier = Modifier.testTag("export_csv_header_button")
+                    ) {
+                        Icon(Icons.Default.FileDownload, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("Ekspor CSV", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    }
                 }
             }
 
@@ -177,6 +188,67 @@ fun AnalyticsScreen(
                             .fillMaxSize()
                             .verticalScroll(rememberScrollState())
                     ) {
+                        // Export CSV Action Banner Card
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(bottom = 10.dp)
+                                .border(1.dp, Color(0xFFBFDBFE), RoundedCornerShape(12.dp)),
+                            colors = CardDefaults.cardColors(containerColor = Color(0xFFEFF6FF))
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(12.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Row(
+                                    modifier = Modifier.weight(1f),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(38.dp)
+                                            .background(DeepRoyalBlue, CircleShape),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(
+                                            Icons.Default.TableChart,
+                                            contentDescription = null,
+                                            tint = CrispWhite,
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.width(10.dp))
+                                    Column {
+                                        Text(
+                                            "Laporan Penjualan CSV",
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 13.sp,
+                                            color = DarkSlate
+                                        )
+                                        Text(
+                                            "Ekspor harian untuk pembukuan Excel & akuntansi",
+                                            fontSize = 11.sp,
+                                            color = Color(0xFF64748B)
+                                        )
+                                    }
+                                }
+                                Button(
+                                    onClick = { showExportDialog = true },
+                                    colors = ButtonDefaults.buttonColors(containerColor = DeepRoyalBlue),
+                                    shape = RoundedCornerShape(8.dp),
+                                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+                                    modifier = Modifier.testTag("export_csv_banner_button")
+                                ) {
+                                    Icon(Icons.Default.FileDownload, contentDescription = null, modifier = Modifier.size(15.dp))
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text("Ekspor", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                }
+                            }
+                        }
+
                         // 2x2 Metric Cards
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             Card(
@@ -325,6 +397,7 @@ fun AnalyticsScreen(
                     // Recent Sales & Completed Orders Review
                     RecentSalesContent(
                         recentSales = recentSales,
+                        onExportClick = { showExportDialog = true },
                         modifier = Modifier.fillMaxSize()
                     )
                 }
@@ -579,6 +652,15 @@ fun AnalyticsScreen(
                     }
                 }
             }
+        }
+
+        if (showExportDialog) {
+            ExportSalesReportDialog(
+                orders = completedOrders,
+                products = products,
+                storeProfile = storeProfile,
+                onDismiss = { showExportDialog = false }
+            )
         }
     }
 }

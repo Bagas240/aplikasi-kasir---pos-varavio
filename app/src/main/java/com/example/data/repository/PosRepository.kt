@@ -1,5 +1,6 @@
 package com.example.data.repository
 
+import com.example.data.cache.ProductDataCache
 import com.example.data.local.PosDao
 import com.example.data.model.CartItem
 import com.example.data.model.Customer
@@ -15,12 +16,16 @@ import com.example.data.model.StaffUser
 import com.example.data.model.StockAdjustment
 import com.example.data.model.TransactionLog
 import com.example.data.model.UserRole
+import com.example.util.BarcodeItemMatcher
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.firstOrNull
 import org.json.JSONArray
 import org.json.JSONObject
 
-class PosRepository(private val posDao: PosDao) {
+class PosRepository(
+    private val posDao: PosDao,
+    val productCache: ProductDataCache = ProductDataCache()
+) {
 
     val transactionLogRepository = TransactionLogRepository(posDao)
 
@@ -71,23 +76,74 @@ class PosRepository(private val posDao: PosDao) {
         }
     }
 
+    suspend fun getProductById(id: Long): Product? {
+        productCache.getById(id)?.let { return it }
+        val product = posDao.getProductById(id)
+        if (product != null) {
+            productCache.put(product)
+        }
+        return product
+    }
+
     suspend fun findProductByBarcodeOrSku(query: String): Product? {
         val trimmed = query.trim()
-        return posDao.getProductByBarcodeOrSku(trimmed)
+        if (trimmed.isEmpty()) return null
+
+        // 1. Check LruCache first (Instant O(1) in-memory lookup, 0 disk I/O)
+        productCache.getByBarcodeOrSku(trimmed)?.let { return it }
+
+        // 2. Direct DAO lookup
+        val direct = posDao.getProductByBarcodeOrSku(trimmed)
+        if (direct != null) {
+            productCache.put(direct)
+            return direct
+        }
+
+        // 3. Fallback: search with cross-format and normalized barcode matching
+        val allProductsList = posDao.getAllProducts().firstOrNull() ?: emptyList()
+        val matched = BarcodeItemMatcher.matchProduct(trimmed, allProductsList)
+        if (matched != null) {
+            productCache.put(matched)
+        }
+        return matched
     }
 
     suspend fun findProductByBarcode(barcode: String): Product? {
         val trimmed = barcode.trim()
-        return posDao.getProductByBarcode(trimmed)
+        if (trimmed.isEmpty()) return null
+        productCache.getByBarcodeOrSku(trimmed)?.let { return it }
+        val product = posDao.getProductByBarcode(trimmed)
+        if (product != null) {
+            productCache.put(product)
+        }
+        return product
     }
 
     fun observeProductByBarcodeOrSku(query: String): Flow<Product?> {
         return posDao.observeProductByBarcodeOrSku(query.trim())
     }
 
-    suspend fun insertProduct(product: Product): Long = posDao.insertProduct(product)
-    suspend fun updateProduct(product: Product) = posDao.updateProduct(product)
-    suspend fun deleteProduct(product: Product) = posDao.deleteProduct(product)
+    suspend fun insertProduct(product: Product): Long {
+        val id = posDao.insertProduct(product)
+        val productWithId = if (product.id == 0L) product.copy(id = id) else product
+        productCache.put(productWithId)
+        return id
+    }
+
+    suspend fun updateProduct(product: Product) {
+        posDao.updateProduct(product)
+        productCache.put(product)
+    }
+
+    suspend fun deleteProduct(product: Product) {
+        posDao.deleteProduct(product)
+        productCache.remove(product)
+    }
+
+    suspend fun updateStock(productId: Long, newStock: Int) {
+        posDao.updateStock(productId, newStock)
+        productCache.updateStock(productId, newStock)
+    }
 
     suspend fun checkoutOrder(
         order: OrderEntity,
@@ -108,10 +164,10 @@ class PosRepository(private val posDao: PosDao) {
 
         // 2. Real-time Stock Deduction
         for (item in cartItems) {
-            val currentProduct = posDao.getProductById(item.product.id)
+            val currentProduct = getProductById(item.product.id)
             if (currentProduct != null) {
                 val newStock = (currentProduct.stock - item.quantity).coerceAtLeast(0)
-                posDao.updateStock(currentProduct.id, newStock)
+                updateStock(currentProduct.id, newStock)
             }
         }
 
@@ -200,10 +256,10 @@ class PosRepository(private val posDao: PosDao) {
         reason: String,
         staffName: String
     ) {
-        val prod = posDao.getProductById(productId) ?: return
+        val prod = getProductById(productId) ?: return
         val prevStock = prod.stock
         val newStock = (prevStock + qtyChange).coerceAtLeast(0)
-        posDao.updateStock(productId, newStock)
+        updateStock(productId, newStock)
 
         posDao.insertAdjustment(
             StockAdjustment(

@@ -86,6 +86,7 @@ import com.example.ui.theme.DarkSlate
 import com.example.ui.theme.DeepRoyalBlue
 import com.example.ui.theme.EmeraldGreen
 import com.example.ui.theme.VibrantBlue
+import com.example.util.BarcodeItemMatcher
 import com.example.util.CurrencyFormatter
 import com.google.mlkit.vision.barcode.BarcodeScannerOptions
 import com.google.mlkit.vision.barcode.BarcodeScanning
@@ -137,8 +138,18 @@ fun BarcodeScannerView(
 
     // Executor for ML Kit image analysis
     val cameraExecutor = remember { Executors.newSingleThreadExecutor() }
+    val barcodeScanner = remember {
+        val barcodeOptions = BarcodeScannerOptions.Builder()
+            .setBarcodeFormats(Barcode.FORMAT_ALL_FORMATS)
+            .build()
+        BarcodeScanning.getClient(barcodeOptions)
+    }
+
     DisposableEffect(Unit) {
         onDispose {
+            try {
+                barcodeScanner.close()
+            } catch (_: Exception) {}
             cameraExecutor.shutdown()
         }
     }
@@ -286,24 +297,31 @@ fun BarcodeScannerView(
                                 try {
                                     val cameraProvider = cameraProviderFuture.get()
 
-                                    // Preview Use Case
-                                    val preview = Preview.Builder().build().also {
-                                        it.surfaceProvider = previewView.surfaceProvider
-                                    }
+                                    // Preview Use Case with low-end optimized resolution (720p)
+                                    val preview = Preview.Builder()
+                                        .setTargetResolution(android.util.Size(1280, 720))
+                                        .build().also {
+                                            it.surfaceProvider = previewView.surfaceProvider
+                                        }
 
-                                    // ML Kit Barcode Scanner Setup
-                                    val barcodeOptions = BarcodeScannerOptions.Builder()
-                                        .setBarcodeFormats(Barcode.FORMAT_ALL_FORMATS)
-                                        .build()
-                                    val barcodeScanner = BarcodeScanning.getClient(barcodeOptions)
-
-                                    // ImageAnalysis Use Case
+                                    // ImageAnalysis Use Case with 720p target & latest backpressure
                                     @OptIn(ExperimentalGetImage::class)
                                     val imageAnalysis = ImageAnalysis.Builder()
+                                        .setTargetResolution(android.util.Size(1280, 720))
                                         .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
                                         .build()
 
+                                    var lastFrameAnalysisTimestamp = 0L
+
                                     imageAnalysis.setAnalyzer(cameraExecutor) { imageProxy ->
+                                        val now = System.currentTimeMillis()
+                                        // Throttle analysis on low-end CPUs: at most 1 frame per 200ms
+                                        if (now - lastFrameAnalysisTimestamp < 200L) {
+                                            imageProxy.close()
+                                            return@setAnalyzer
+                                        }
+                                        lastFrameAnalysisTimestamp = now
+
                                         val mediaImage = imageProxy.image
                                         if (mediaImage != null) {
                                             val inputImage = InputImage.fromMediaImage(
@@ -316,18 +334,14 @@ fun BarcodeScannerView(
                                                         val rawValue = barcode.rawValue ?: continue
                                                         if (rawValue.isBlank()) continue
 
-                                                        val now = System.currentTimeMillis()
                                                         // Debounce: allow scan if code changed or 1.5s passed
                                                         if (rawValue != lastScannedCode || now - lastDetectionTimestamp > 1500L) {
                                                             lastScannedCode = rawValue
                                                             lastDetectionTimestamp = now
                                                             isSuccessHighlight = true
 
-                                                            // Identify product from catalog
-                                                            val matched = products.find {
-                                                                it.barcode.equals(rawValue, ignoreCase = true) ||
-                                                                        it.sku.equals(rawValue, ignoreCase = true)
-                                                            }
+                                                            // Identify product from catalog using BarcodeItemMatcher
+                                                            val matched = BarcodeItemMatcher.matchProduct(rawValue, products)
                                                             identifiedProduct = matched
 
                                                             // Send scanned ID to transaction state manager
@@ -527,10 +541,7 @@ fun BarcodeScannerView(
                         val input = manualInput.trim()
                         if (input.isNotBlank()) {
                             lastScannedCode = input
-                            val matched = products.find {
-                                it.barcode.equals(input, ignoreCase = true) ||
-                                        it.sku.equals(input, ignoreCase = true)
-                            }
+                            val matched = BarcodeItemMatcher.matchProduct(input, products)
                             identifiedProduct = matched
                             isSuccessHighlight = true
                             onScan(input)

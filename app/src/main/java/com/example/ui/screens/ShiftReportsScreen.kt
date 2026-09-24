@@ -27,6 +27,10 @@ import androidx.compose.material.icons.filled.Badge
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.FileDownload
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.ui.platform.testTag
+import com.example.ui.components.ExportSalesReportDialog
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.LockOpen
 import androidx.compose.material.icons.filled.People
@@ -97,6 +101,9 @@ fun ShiftReportsScreen(
     val staffUsers by viewModel.staffUsers.collectAsStateWithLifecycle()
     val shiftSchedules by viewModel.shiftSchedules.collectAsStateWithLifecycle()
     val recentSales by viewModel.recentSales.collectAsStateWithLifecycle()
+    val completedOrders by viewModel.completedOrders.collectAsStateWithLifecycle()
+    val products by viewModel.products.collectAsStateWithLifecycle()
+    val storeProfile by viewModel.storeProfile.collectAsStateWithLifecycle()
 
     val activeShift = remember(shifts) { shifts.find { it.status == "OPEN" } }
     val pastShifts = remember(shifts) { shifts.filter { it.status == "CLOSED" } }
@@ -107,6 +114,7 @@ fun ShiftReportsScreen(
     var showOpenShiftDialog by remember { mutableStateOf(false) }
     var showCloseShiftDialog by remember { mutableStateOf(false) }
     var showCashInOutDialog by remember { mutableStateOf(false) }
+    var showExportCsvDialog by remember { mutableStateOf(false) }
 
     var scheduleToEdit by remember { mutableStateOf<ShiftSchedule?>(null) }
     var showAddScheduleDialog by remember { mutableStateOf(false) }
@@ -124,7 +132,7 @@ fun ShiftReportsScreen(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Column {
+                Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = "Shift & Manajemen Pengguna",
                         fontWeight = FontWeight.Bold,
@@ -137,18 +145,36 @@ fun ShiftReportsScreen(
                         color = Color(0xFF64748B)
                     )
                 }
-                Box(
-                    modifier = Modifier
-                        .size(36.dp)
-                        .background(if (activeShift != null) EmeraldGreen else Color(0xFF94A3B8), CircleShape),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        if (activeShift != null) Icons.Default.LockOpen else Icons.Default.Lock,
-                        contentDescription = null,
-                        tint = CrispWhite,
-                        modifier = Modifier.size(20.dp)
-                    )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Button(
+                        onClick = { showExportCsvDialog = true },
+                        colors = ButtonDefaults.buttonColors(containerColor = DeepRoyalBlue),
+                        shape = RoundedCornerShape(8.dp),
+                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp),
+                        modifier = Modifier.testTag("shift_export_csv_button")
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.FileDownload,
+                            contentDescription = null,
+                            modifier = Modifier.size(15.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("Ekspor CSV", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    }
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Box(
+                        modifier = Modifier
+                            .size(36.dp)
+                            .background(if (activeShift != null) EmeraldGreen else Color(0xFF94A3B8), CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            if (activeShift != null) Icons.Default.LockOpen else Icons.Default.Lock,
+                            contentDescription = null,
+                            tint = CrispWhite,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
                 }
             }
 
@@ -341,6 +367,15 @@ fun ShiftReportsScreen(
             dismissButton = {
                 TextButton(onClick = { userToDelete = null }) { Text("Batal") }
             }
+        )
+    }
+
+    if (showExportCsvDialog) {
+        ExportSalesReportDialog(
+            orders = completedOrders,
+            products = products,
+            storeProfile = storeProfile,
+            onDismiss = { showExportCsvDialog = false }
         )
     }
 }

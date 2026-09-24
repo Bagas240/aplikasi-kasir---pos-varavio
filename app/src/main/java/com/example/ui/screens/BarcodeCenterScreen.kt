@@ -143,10 +143,7 @@ fun BarcodeCenterScreen(
                 products = products,
                 onScan = { scannedCode ->
                     viewModel.setCustomBarcodeCode(scannedCode)
-                    val matched = products.find {
-                        it.barcode.equals(scannedCode, ignoreCase = true) ||
-                                it.sku.equals(scannedCode, ignoreCase = true)
-                    }
+                    val matched = com.example.util.BarcodeItemMatcher.matchProduct(scannedCode, products)
                     if (matched != null) {
                         viewModel.selectProductForBarcode(matched)
                     }

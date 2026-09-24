@@ -20,18 +20,11 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Set up JDK 21
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: 'temurin'
           java-version: '21'
           cache: 'gradle'
-
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
-
-      - name: Accept Android SDK Licenses
-        run: |
-          yes | sdkmanager --licenses || true
 
       - name: Prepare Secrets and Keystore
         run: |
@@ -39,6 +32,9 @@ jobs:
           touch .env.example
           touch app/.env
           touch app/.env.example
+          if [ -f "debug.keystore.base64" ]; then
+            base64 -d debug.keystore.base64 > debug.keystore 2>/dev/null || true
+          fi
           if [ ! -f "debug.keystore" ]; then
             keytool -genkey -v -keystore debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
           fi
@@ -48,11 +44,11 @@ jobs:
 
       - name: Run Unit Tests
         run: |
-          ./gradlew testDebugUnitTest --stacktrace
+          ./gradlew testDebugUnitTest --stacktrace --no-daemon
 
       - name: Build Debug APK
         run: |
-          ./gradlew assembleDebug --stacktrace
+          ./gradlew assembleDebug --stacktrace --no-daemon
 
       - name: Upload Test Reports
         if: always()

@@ -25,6 +25,8 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.material.icons.filled.FileDownload
 import androidx.compose.material.icons.filled.Payment
 import androidx.compose.material.icons.filled.ReceiptLong
 import androidx.compose.material.icons.filled.Search
@@ -70,6 +72,7 @@ import java.util.Locale
 fun RecentSalesDialog(
     recentSales: List<TransactionLog>,
     onDismiss: () -> Unit,
+    onExportClick: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     AlertDialog(
@@ -81,7 +84,8 @@ fun RecentSalesDialog(
         text = {
             RecentSalesContent(
                 recentSales = recentSales,
-                onClose = onDismiss
+                onClose = onDismiss,
+                onExportClick = onExportClick
             )
         },
         confirmButton = {}
@@ -92,6 +96,7 @@ fun RecentSalesDialog(
 fun RecentSalesContent(
     recentSales: List<TransactionLog>,
     onClose: (() -> Unit)? = null,
+    onExportClick: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     var searchQuery by remember { mutableStateOf("") }
@@ -159,9 +164,30 @@ fun RecentSalesContent(
                 }
             }
 
-            if (onClose != null) {
-                IconButton(onClick = onClose) {
-                    Icon(Icons.Default.Close, contentDescription = "Tutup", tint = Color(0xFF64748B))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                if (onExportClick != null) {
+                    Button(
+                        onClick = onExportClick,
+                        colors = ButtonDefaults.buttonColors(containerColor = DeepRoyalBlue),
+                        shape = RoundedCornerShape(8.dp),
+                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp),
+                        modifier = Modifier.testTag("recent_sales_export_button")
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.FileDownload,
+                            contentDescription = null,
+                            modifier = Modifier.size(15.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("Ekspor CSV", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    }
+                    Spacer(modifier = Modifier.width(6.dp))
+                }
+
+                if (onClose != null) {
+                    IconButton(onClick = onClose) {
+                        Icon(Icons.Default.Close, contentDescription = "Tutup", tint = Color(0xFF64748B))
+                    }
                 }
             }
         }

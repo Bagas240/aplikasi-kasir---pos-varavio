@@ -58,6 +58,10 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
+import com.example.data.model.Product
+import com.example.util.BarcodeItemMatcher
+import com.example.util.BarcodeScanResult
+import com.example.util.CurrencyFormatter
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
@@ -112,7 +116,9 @@ fun CameraView(
     modifier: Modifier = Modifier,
     lastScannedCode: String? = null,
     onClose: (() -> Unit)? = null,
-    sampleCodes: List<String> = emptyList()
+    sampleCodes: List<String> = emptyList(),
+    products: List<Product> = emptyList(),
+    onBarcodeResult: ((BarcodeScanResult) -> Unit)? = null
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -142,6 +148,13 @@ fun CameraView(
 
     // Real-time captured feedback state
     var activeCapturedCode by remember { mutableStateOf(lastScannedCode ?: "") }
+    var mappedProduct by remember {
+        mutableStateOf(
+            if (!lastScannedCode.isNullOrBlank() && products.isNotEmpty()) {
+                BarcodeItemMatcher.matchProduct(lastScannedCode, products)
+            } else null
+        )
+    }
     var lastScannedTimestamp by remember { mutableLongStateOf(0L) }
     var showCapturedBadge by remember { mutableStateOf(false) }
 
@@ -149,6 +162,7 @@ fun CameraView(
     LaunchedEffect(lastScannedCode) {
         if (!lastScannedCode.isNullOrBlank()) {
             activeCapturedCode = lastScannedCode
+            mappedProduct = if (products.isNotEmpty()) BarcodeItemMatcher.matchProduct(lastScannedCode, products) else null
             showCapturedBadge = true
         }
     }
@@ -161,9 +175,19 @@ fun CameraView(
         }
     }
 
+    val barcodeScanner = remember {
+        val barcodeOptions = BarcodeScannerOptions.Builder()
+            .setBarcodeFormats(Barcode.FORMAT_ALL_FORMATS)
+            .build()
+        BarcodeScanning.getClient(barcodeOptions)
+    }
+
     val cameraExecutor = remember { Executors.newSingleThreadExecutor() }
     DisposableEffect(Unit) {
         onDispose {
+            try {
+                barcodeScanner.close()
+            } catch (_: Exception) {}
             cameraExecutor.shutdown()
         }
     }
@@ -320,24 +344,31 @@ fun CameraView(
                                 try {
                                     val cameraProvider = cameraProviderFuture.get()
 
-                                    // Preview use case
-                                    val preview = Preview.Builder().build().also {
-                                        it.surfaceProvider = previewView.surfaceProvider
-                                    }
+                                    // Preview use case with low-end optimized resolution (720p)
+                                    val preview = Preview.Builder()
+                                        .setTargetResolution(android.util.Size(1280, 720))
+                                        .build().also {
+                                            it.surfaceProvider = previewView.surfaceProvider
+                                        }
 
-                                    // ML Kit Barcode Scanner Setup
-                                    val barcodeOptions = BarcodeScannerOptions.Builder()
-                                        .setBarcodeFormats(Barcode.FORMAT_ALL_FORMATS)
-                                        .build()
-                                    val barcodeScanner = BarcodeScanning.getClient(barcodeOptions)
-
-                                    // ImageAnalysis use case
+                                    // ImageAnalysis use case with 720p target & latest backpressure
                                     @OptIn(ExperimentalGetImage::class)
                                     val imageAnalysis = ImageAnalysis.Builder()
+                                        .setTargetResolution(android.util.Size(1280, 720))
                                         .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
                                         .build()
 
+                                    var lastFrameAnalysisTimestamp = 0L
+
                                     imageAnalysis.setAnalyzer(cameraExecutor) { imageProxy ->
+                                        val now = System.currentTimeMillis()
+                                        // Throttle analysis on low-end CPUs: at most 1 frame per 200ms
+                                        if (now - lastFrameAnalysisTimestamp < 200L) {
+                                            imageProxy.close()
+                                            return@setAnalyzer
+                                        }
+                                        lastFrameAnalysisTimestamp = now
+
                                         val mediaImage = imageProxy.image
                                         if (mediaImage != null) {
                                             val inputImage = InputImage.fromMediaImage(
@@ -350,12 +381,23 @@ fun CameraView(
                                                         val rawValue = barcode.rawValue?.trim() ?: continue
                                                         if (rawValue.isBlank()) continue
 
-                                                        val now = System.currentTimeMillis()
                                                         // Debounce: allow scan if code changed or 1.2s passed
                                                         if (rawValue != activeCapturedCode || now - lastScannedTimestamp > 1200L) {
                                                             activeCapturedCode = rawValue
                                                             lastScannedTimestamp = now
+                                                            val matched = if (products.isNotEmpty()) BarcodeItemMatcher.matchProduct(rawValue, products) else null
+                                                            mappedProduct = matched
                                                             showCapturedBadge = true
+                                                            val formatName = BarcodeItemMatcher.getBarcodeFormatName(barcode.format)
+                                                            onBarcodeResult?.invoke(
+                                                                BarcodeScanResult(
+                                                                    rawCode = rawValue,
+                                                                    format = barcode.format,
+                                                                    formatName = formatName,
+                                                                    matchedProduct = matched,
+                                                                    timestamp = now
+                                                                )
+                                                            )
                                                             onBarcodeScanned(rawValue)
                                                         }
                                                     }
@@ -520,8 +562,11 @@ fun CameraView(
                         ) {
                             Surface(
                                 shape = RoundedCornerShape(8.dp),
-                                color = Color(0xFF064E3B).copy(alpha = 0.95f),
-                                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF10B981)),
+                                color = if (mappedProduct != null) Color(0xEE064E3B) else Color(0xEE1E293B),
+                                border = androidx.compose.foundation.BorderStroke(
+                                    1.dp,
+                                    if (mappedProduct != null) Color(0xFF10B981) else Color(0xFF38BDF8)
+                                ),
                                 modifier = Modifier.testTag("viewfinder_captured_code_badge")
                             ) {
                                 Row(
@@ -529,19 +574,31 @@ fun CameraView(
                                     modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
                                 ) {
                                     Icon(
-                                        imageVector = Icons.Default.CheckCircle,
+                                        imageVector = if (mappedProduct != null) Icons.Default.CheckCircle else Icons.Default.QrCodeScanner,
                                         contentDescription = null,
-                                        tint = Color(0xFF34D399),
+                                        tint = if (mappedProduct != null) Color(0xFF34D399) else Color(0xFFFBBF24),
                                         modifier = Modifier.size(16.dp)
                                     )
                                     Spacer(modifier = Modifier.width(6.dp))
-                                    Text(
-                                        text = "Kode Terdeteksi: $activeCapturedCode",
-                                        color = Color.White,
-                                        fontSize = 12.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        fontFamily = FontFamily.Monospace
-                                    )
+                                    Column {
+                                        Text(
+                                            text = mappedProduct?.name ?: "Kode: $activeCapturedCode",
+                                            color = Color.White,
+                                            fontSize = 12.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                        Text(
+                                            text = if (mappedProduct != null) {
+                                                "${CurrencyFormatter.formatRupiah(mappedProduct!!.sellPrice)} • Stok: ${mappedProduct!!.stock}"
+                                            } else {
+                                                "Belum Terdaftar di Katalog"
+                                            },
+                                            color = if (mappedProduct != null) Color(0xFF34D399) else Color(0xFF94A3B8),
+                                            fontSize = 10.sp
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -574,7 +631,10 @@ fun CameraView(
                                     if (manualInputCode.isNotBlank()) {
                                         val code = manualInputCode.trim()
                                         activeCapturedCode = code
+                                        val matched = if (products.isNotEmpty()) BarcodeItemMatcher.matchProduct(code, products) else null
+                                        mappedProduct = matched
                                         showCapturedBadge = true
+                                        onBarcodeResult?.invoke(BarcodeScanResult(code, matchedProduct = matched))
                                         onBarcodeScanned(code)
                                         manualInputCode = ""
                                     }
@@ -599,7 +659,10 @@ fun CameraView(
                                 if (manualInputCode.isNotBlank()) {
                                     val code = manualInputCode.trim()
                                     activeCapturedCode = code
+                                    val matched = if (products.isNotEmpty()) BarcodeItemMatcher.matchProduct(code, products) else null
+                                    mappedProduct = matched
                                     showCapturedBadge = true
+                                    onBarcodeResult?.invoke(BarcodeScanResult(code, matchedProduct = matched))
                                     onBarcodeScanned(code)
                                     manualInputCode = ""
                                 }
@@ -632,7 +695,10 @@ fun CameraView(
                         Surface(
                             onClick = {
                                 activeCapturedCode = code
+                                val matched = if (products.isNotEmpty()) BarcodeItemMatcher.matchProduct(code, products) else null
+                                mappedProduct = matched
                                 showCapturedBadge = true
+                                onBarcodeResult?.invoke(BarcodeScanResult(code, matchedProduct = matched))
                                 onBarcodeScanned(code)
                             },
                             shape = RoundedCornerShape(6.dp),
@@ -668,14 +734,14 @@ fun CameraView(
                         modifier = Modifier.weight(1f)
                     ) {
                         Text(
-                            text = "Kode Terakhir:",
+                            text = "Item Terdeteksi:",
                             color = Color(0xFF94A3B8),
                             fontSize = 11.sp
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
-                            text = activeCapturedCode,
-                            color = Color(0xFF38BDF8),
+                            text = mappedProduct?.name ?: activeCapturedCode,
+                            color = if (mappedProduct != null) Color(0xFF34D399) else Color(0xFF38BDF8),
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Bold,
                             fontFamily = FontFamily.Monospace,
@@ -684,8 +750,8 @@ fun CameraView(
                         )
                     }
                     Text(
-                        text = "Aktif di Keranjang",
-                        color = Color(0xFF10B981),
+                        text = if (mappedProduct != null) "Stok: ${mappedProduct!!.stock}" else "Belum Terdaftar",
+                        color = if (mappedProduct != null) Color(0xFF10B981) else Color(0xFFF59E0B),
                         fontSize = 11.sp,
                         fontWeight = FontWeight.SemiBold
                     )

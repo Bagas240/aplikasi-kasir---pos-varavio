@@ -20,8 +20,11 @@ import com.example.data.model.StockAdjustment
 import com.example.data.model.StoreProfile
 import com.example.data.model.TransactionLog
 import com.example.data.model.UserRole
+import com.example.VoravioApplication
 import com.example.data.repository.PosRepository
 import com.example.util.BarcodeFormat
+import com.example.util.BarcodeItemMatcher
+import com.example.util.BarcodeScanResult
 import com.example.util.SoundHelper
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -46,9 +49,15 @@ class PosViewModel(application: Application) : AndroidViewModel(application) {
     private val repository: PosRepository
     init {
         val database = AppDatabase.getDatabase(application)
-        repository = PosRepository(database.posDao())
+        val appCache = (application as? VoravioApplication)?.productCache
+        repository = if (appCache != null) PosRepository(database.posDao(), appCache) else PosRepository(database.posDao())
         viewModelScope.launch {
             repository.seedInitialDataIfNeeded()
+        }
+        viewModelScope.launch {
+            repository.allProducts.collect { productList ->
+                repository.productCache.putAll(productList)
+            }
         }
         viewModelScope.launch {
             repository.allStaffUsers.collect { users ->
@@ -403,7 +412,7 @@ class PosViewModel(application: Application) : AndroidViewModel(application) {
 
     fun clearScanFeedback() { _scanFeedback.value = null }
 
-    fun onScanBarcode(barcode: String) {
+    fun onScanBarcode(barcode: String, formatName: String = "Barcode") {
         val trimmed = barcode.trim()
         if (trimmed.isBlank()) return
         _lastScannedBarcode.value = trimmed
@@ -423,6 +432,32 @@ class PosViewModel(application: Application) : AndroidViewModel(application) {
                 addToCart(product)
             }
         }
+    }
+
+    fun onScanBarcodeResult(result: BarcodeScanResult) {
+        val trimmed = result.rawCode.trim()
+        if (trimmed.isBlank()) return
+        _lastScannedBarcode.value = trimmed
+        SoundHelper.playBeep()
+        SoundHelper.vibrate(getApplication())
+
+        viewModelScope.launch {
+            val product = result.matchedProduct ?: repository.findProductByBarcodeOrSku(trimmed)
+            _lastScannedProduct.value = product
+            _scanFeedback.value = ScanFeedback(trimmed, product)
+
+            val entry = CapturedProductCode(trimmed, product)
+            val filtered = _capturedProductCodes.value.filterNot { it.code == trimmed }
+            _capturedProductCodes.value = (listOf(entry) + filtered).take(12)
+
+            if (product != null) {
+                addToCart(product)
+            }
+        }
+    }
+
+    suspend fun findProductByCode(code: String): Product? {
+        return repository.findProductByBarcodeOrSku(code)
     }
 
     // BARCODE ENGINE STATE
