@@ -176,6 +176,9 @@ interface PosDao {
     @Delete
     suspend fun deleteStaffUser(user: StaffUser)
 
+    @Query("DELETE FROM staff_users WHERE id IN (:ids)")
+    suspend fun deleteStaffUsersByIds(ids: List<String>)
+
     // SHIFT SCHEDULES (Shift 1, Shift 2, dll)
     @Query("SELECT * FROM shift_schedules ORDER BY id ASC")
     fun getAllShiftSchedules(): Flow<List<ShiftSchedule>>

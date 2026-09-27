@@ -19,8 +19,10 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.FileDownload
 import androidx.compose.material.icons.filled.Print
 import androidx.compose.material.icons.filled.Share
+import com.example.util.PosPrinterManager
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -182,20 +184,21 @@ fun ThermalReceiptDialog(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Action Buttons: Print Thermal ESC/POS & Share WhatsApp
+                // Action Buttons: System Print, Download, Share, Bluetooth
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
+                    // 1. System Print (Printer Android & Simpan PDF)
                     Button(
                         onClick = {
-                            val bytes = EscPosPrinterHelper.generateEscPosBytes(
-                                order,
-                                items,
-                                store,
+                            PosPrinterManager.printReceiptToSystem(
+                                context = context,
+                                order = order,
+                                items = items,
+                                store = store,
                                 is80mm = store.printerPaperWidth == "80mm"
                             )
-                            onPrintSuccess("Stream ESC/POS (${bytes.size} bytes) terkirim ke Printer Bluetooth!")
                         },
                         colors = ButtonDefaults.buttonColors(containerColor = DeepRoyalBlue),
                         modifier = Modifier
@@ -203,23 +206,72 @@ fun ThermalReceiptDialog(
                             .height(48.dp),
                         shape = RoundedCornerShape(10.dp)
                     ) {
-                        Icon(Icons.Default.Print, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Icon(Icons.Default.Print, contentDescription = null, tint = CrispWhite, modifier = Modifier.size(18.dp))
                         Spacer(modifier = Modifier.width(6.dp))
-                        Text("Cetak Thermal", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                        Text("Cetak Printer / PDF", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = CrispWhite)
                     }
 
+                    // 2. Download / Simpan Gambar Struk
+                    Button(
+                        onClick = {
+                            PosPrinterManager.downloadReceipt(
+                                context = context,
+                                order = order,
+                                items = items,
+                                store = store,
+                                is80mm = store.printerPaperWidth == "80mm"
+                            )
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = EmeraldGreen),
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(48.dp),
+                        shape = RoundedCornerShape(10.dp)
+                    ) {
+                        Icon(Icons.Default.FileDownload, contentDescription = null, tint = CrispWhite, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("Download Struk", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = CrispWhite)
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    // 3. Share WhatsApp / Teks
                     OutlinedButton(
                         onClick = {
                             EscPosPrinterHelper.shareReceipt(context, receiptText, order.orderId)
                         },
                         modifier = Modifier
                             .weight(1f)
-                            .height(48.dp),
-                        shape = RoundedCornerShape(10.dp)
+                            .height(42.dp),
+                        shape = RoundedCornerShape(8.dp)
                     ) {
-                        Icon(Icons.Default.Share, contentDescription = null, tint = EmeraldGreen, modifier = Modifier.size(18.dp))
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text("Kirim Struk", color = EmeraldGreen, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                        Icon(Icons.Default.Share, contentDescription = null, tint = DarkSlate, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("Kirim WhatsApp", color = DarkSlate, fontWeight = FontWeight.SemiBold, fontSize = 11.sp)
+                    }
+
+                    // 4. Bluetooth Thermal Stream
+                    OutlinedButton(
+                        onClick = {
+                            val bytes = EscPosPrinterHelper.generateEscPosBytes(
+                                order,
+                                items,
+                                store,
+                                is80mm = store.printerPaperWidth == "80mm"
+                            )
+                            onPrintSuccess("Stream ESC/POS (${bytes.size} bytes) terkirim ke Thermal!")
+                        },
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(42.dp),
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Text("Thermal Bluetooth", color = DeepRoyalBlue, fontWeight = FontWeight.SemiBold, fontSize = 11.sp)
                     }
                 }
 
@@ -227,13 +279,13 @@ fun ThermalReceiptDialog(
 
                 Button(
                     onClick = onDismiss,
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFF1F5F9)),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFF1F5F9), contentColor = DarkSlate),
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(44.dp),
                     shape = RoundedCornerShape(8.dp)
                 ) {
-                    Text("Selesai / Transaksi Baru", color = DarkSlate, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
+                    Text("Selesai / Transaksi Baru", color = DarkSlate, fontWeight = FontWeight.Bold, fontSize = 13.sp)
                 }
             }
         }

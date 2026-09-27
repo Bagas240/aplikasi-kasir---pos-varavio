@@ -321,12 +321,14 @@ class PosViewModel(application: Application) : AndroidViewModel(application) {
         cashPaid: Double = 0.0,
         splitMethod2: String = "",
         splitAmt1: Double = 0.0,
-        splitAmt2: Double = 0.0
+        splitAmt2: Double = 0.0,
+        customerName: String = ""
     ) {
         val grandTotal = cartGrandTotal
         val change = if (method == PaymentMethod.CASH) (cashPaid - grandTotal).coerceAtLeast(0.0) else 0.0
         val orderId = "ORD-" + System.currentTimeMillis().toString().takeLast(8)
         val activeShift = shifts.value.find { it.status == "OPEN" }
+        val finalCustName = customerName.trim().ifBlank { _selectedCustomer.value?.name ?: "Pelanggan Walk-In" }
 
         val order = OrderEntity(
             orderId = orderId,
@@ -336,7 +338,7 @@ class PosViewModel(application: Application) : AndroidViewModel(application) {
             shiftName = activeShift?.let { "${it.shiftScheduleName} (${it.shiftScheduleTime})" } ?: "",
             shiftId = activeShift?.id ?: 0L,
             customerId = _selectedCustomer.value?.id,
-            customerName = _selectedCustomer.value?.name ?: "Pelanggan Walk-In",
+            customerName = finalCustName,
             customerPhone = _selectedCustomer.value?.phone ?: "",
             subtotal = cartSubtotal,
             discountTotal = cartDiscountAmount,
@@ -628,6 +630,9 @@ class PosViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun addStaffUser(user: StaffUser) = saveStaffUser(user)
+    fun updateStaffUser(user: StaffUser) = saveStaffUser(user)
+
     fun saveShiftSchedule(schedule: ShiftSchedule) {
         viewModelScope.launch {
             if (schedule.id == 0L) {
@@ -637,6 +642,9 @@ class PosViewModel(application: Application) : AndroidViewModel(application) {
             }
         }
     }
+
+    fun addShiftSchedule(schedule: ShiftSchedule) = saveShiftSchedule(schedule)
+    fun updateShiftSchedule(schedule: ShiftSchedule) = saveShiftSchedule(schedule)
 
     fun deleteShiftSchedule(schedule: ShiftSchedule) {
         viewModelScope.launch {

@@ -24,10 +24,12 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Autorenew
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.FileDownload
 import androidx.compose.material.icons.filled.Print
 import androidx.compose.material.icons.filled.QrCode
 import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.Share
+import com.example.util.PosPrinterManager
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -393,7 +395,7 @@ fun BarcodeCenterScreen(
             colors = CardDefaults.cardColors(containerColor = CrispWhite),
             shape = RoundedCornerShape(10.dp)
         ) {
-            Column(modifier = Modifier.padding(12.dp)) {
+            Column(modifier = Modifier.padding(14.dp)) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -403,37 +405,90 @@ fun BarcodeCenterScreen(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Button(
                             onClick = { if (printQty > 1) printQty-- },
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFF1F5F9)),
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFF1F5F9), contentColor = DarkSlate),
                             modifier = Modifier.size(32.dp),
                             contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp)
                         ) {
-                            Text("-", color = DarkSlate, fontWeight = FontWeight.Bold)
+                            Text("-", color = DarkSlate, fontWeight = FontWeight.Bold, fontSize = 16.sp)
                         }
-                        Text(printQty.toString(), fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 12.dp))
+                        Text(printQty.toString(), fontWeight = FontWeight.Bold, color = DarkSlate, modifier = Modifier.padding(horizontal = 14.dp))
                         Button(
                             onClick = { printQty++ },
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFF1F5F9)),
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFF1F5F9), contentColor = DarkSlate),
                             modifier = Modifier.size(32.dp),
                             contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp)
                         ) {
-                            Text("+", color = DarkSlate, fontWeight = FontWeight.Bold)
+                            Text("+", color = DarkSlate, fontWeight = FontWeight.Bold, fontSize = 16.sp)
                         }
                     }
                 }
 
-                Spacer(modifier = Modifier.height(10.dp))
+                Spacer(modifier = Modifier.height(14.dp))
 
-                Button(
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    // 1. Native Android System Print Spooler (Printers & PDF)
+                    Button(
+                        onClick = {
+                            val code = customBarcodeCode.ifBlank { activeProduct.barcode.ifBlank { activeProduct.sku } }
+                            PosPrinterManager.printBarcodeLabelToSystem(
+                                context = context,
+                                store = storeProfile,
+                                product = activeProduct,
+                                barcodeString = code,
+                                format = barcodeFormat,
+                                is80mm = printLayoutPreset == "80mm"
+                            )
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = DeepRoyalBlue),
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(48.dp),
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Icon(Icons.Default.Print, contentDescription = null, tint = CrispWhite, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("Cetak ke Printer / PDF", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = CrispWhite)
+                    }
+
+                    // 2. Direct Download / Save to Gallery/Downloads
+                    Button(
+                        onClick = {
+                            val code = customBarcodeCode.ifBlank { activeProduct.barcode.ifBlank { activeProduct.sku } }
+                            PosPrinterManager.downloadBarcodeLabel(
+                                context = context,
+                                store = storeProfile,
+                                product = activeProduct,
+                                barcodeString = code,
+                                format = barcodeFormat,
+                                is80mm = printLayoutPreset == "80mm"
+                            )
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = EmeraldGreen),
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(48.dp),
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Icon(Icons.Default.FileDownload, contentDescription = null, tint = CrispWhite, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("Download Barcode", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = CrispWhite)
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // 3. Thermal ESC/POS Bluetooth Stream
+                OutlinedButton(
                     onClick = { viewModel.printBarcodeLabel() },
-                    colors = ButtonDefaults.buttonColors(containerColor = DeepRoyalBlue),
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(48.dp),
+                        .height(42.dp),
                     shape = RoundedCornerShape(8.dp)
                 ) {
-                    Icon(Icons.Default.Print, contentDescription = null, modifier = Modifier.size(18.dp))
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text("Kirim Cetak Label ($printQty Lembar)", fontWeight = FontWeight.Bold)
+                    Text("Kirim Stream Bluetooth Thermal ($printQty Lembar)", color = DeepRoyalBlue, fontWeight = FontWeight.SemiBold, fontSize = 12.sp)
                 }
 
                 // Feedback snackbar

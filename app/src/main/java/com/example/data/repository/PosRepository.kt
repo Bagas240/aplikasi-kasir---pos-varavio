@@ -50,18 +50,9 @@ class PosRepository(
         )
         posDao.deleteProductsBySkus(demoSkus)
 
-        // Seed Staff Users if empty
-        val existingStaff = posDao.getAllStaffUsers().firstOrNull()
-        if (existingStaff.isNullOrEmpty()) {
-            posDao.insertStaffUsers(
-                listOf(
-                    StaffUser(id = "U-001", name = "Bagas (Owner)", role = UserRole.OWNER, pin = "1234", phone = "08123456789"),
-                    StaffUser(id = "U-002", name = "Dian (Manajer)", role = UserRole.MANAGER, pin = "2222", phone = "08129876543"),
-                    StaffUser(id = "U-003", name = "Rian (Kasir 1)", role = UserRole.CASHIER, pin = "0000", phone = "08134567890"),
-                    StaffUser(id = "U-004", name = "Siti (Kasir 2)", role = UserRole.CASHIER, pin = "1111", phone = "08135678901")
-                )
-            )
-        }
+        // Delete legacy demo staff users so only real registered owner/staff exist
+        val demoStaffIds = listOf("U-002", "U-003", "U-004")
+        posDao.deleteStaffUsersByIds(demoStaffIds)
 
         // Seed Shift Schedules if empty
         val existingSchedules = posDao.getAllShiftSchedules().firstOrNull()

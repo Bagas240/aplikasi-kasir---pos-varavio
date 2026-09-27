@@ -153,13 +153,16 @@ fun PaymentCheckoutBottomSheet(
     selectedCustomer: Customer? = null,
     storeProfile: StoreProfile = StoreProfile(),
     onUpdateQrisImage: ((String?) -> Unit)? = null,
-    onProcessPayment: (method: PaymentMethod, cashPaid: Double, splitMethod2: String, splitAmt1: Double, splitAmt2: Double) -> Unit,
+    onProcessPayment: (method: PaymentMethod, cashPaid: Double, splitMethod2: String, splitAmt1: Double, splitAmt2: Double, customerName: String) -> Unit,
     onDismiss: () -> Unit
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val context = LocalContext.current
     val clipboardManager = LocalClipboardManager.current
     val focusManager = LocalFocusManager.current
+
+    // Customer Name State (Optional)
+    var customerNameInput by remember { mutableStateOf(selectedCustomer?.name ?: "") }
 
     // Payment Category Tab: 0 = Cash / Tunai, 1 = QRIS Toko, 2 = Kartu / Lainnya
     var selectedCategoryTab by remember { mutableIntStateOf(0) }
@@ -197,29 +200,6 @@ fun PaymentCheckoutBottomSheet(
 
     // QRIS Fullscreen presentation state for handing to customer
     var showFullScreenQris by remember { mutableStateOf(false) }
-
-    // QRIS Photo picker for store owner
-    val qrisPhotoPicker = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.PickVisualMedia(),
-        onResult = { uri ->
-            if (uri != null) {
-                try {
-                    val inputStream = context.contentResolver.openInputStream(uri)
-                    val destFile = File(context.filesDir, "store_qris_${System.currentTimeMillis()}.png")
-                    inputStream?.use { input ->
-                        destFile.outputStream().use { output ->
-                            input.copyTo(output)
-                        }
-                    }
-                    onUpdateQrisImage?.invoke(destFile.absolutePath)
-                    Toast.makeText(context, "Foto QRIS Toko berhasil disimpan!", Toast.LENGTH_SHORT).show()
-                } catch (e: Exception) {
-                    onUpdateQrisImage?.invoke(uri.toString())
-                    Toast.makeText(context, "Foto QRIS Toko berhasil diperbarui!", Toast.LENGTH_SHORT).show()
-                }
-            }
-        }
-    )
 
     // Digital Payment Options List: only QRIS is available, others marked "Not Available" and cannot be clicked
     val digitalPaymentOptions = listOf(
@@ -409,6 +389,21 @@ fun PaymentCheckoutBottomSheet(
                     }
                 }
             }
+
+            // Optional Customer Name Input Field
+            OutlinedTextField(
+                value = customerNameInput,
+                onValueChange = { customerNameInput = it },
+                label = { Text("Nama Pelanggan (Opsional)") },
+                placeholder = { Text("Contoh: Ibu Ani / Meja 2 / Walk-In") },
+                leadingIcon = { Icon(Icons.Default.Person, contentDescription = null, tint = DeepRoyalBlue, modifier = Modifier.size(18.dp)) },
+                singleLine = true,
+                shape = RoundedCornerShape(10.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp, vertical = 6.dp)
+                    .testTag("checkout_customer_name_input")
+            )
 
             // Payment Mode Segmented Tab (Cash vs QRIS vs Kartu/Lainnya)
             TabRow(
@@ -917,77 +912,18 @@ fun PaymentCheckoutBottomSheet(
 
                                         Spacer(modifier = Modifier.height(8.dp))
 
-                                        Row(
-                                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                            verticalAlignment = Alignment.CenterVertically
+                                        OutlinedButton(
+                                            onClick = { showFullScreenQris = true },
+                                            shape = RoundedCornerShape(8.dp),
+                                            contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 14.dp, vertical = 6.dp)
                                         ) {
-                                            OutlinedButton(
-                                                onClick = { showFullScreenQris = true },
-                                                shape = RoundedCornerShape(8.dp),
-                                                contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 10.dp, vertical = 6.dp)
-                                            ) {
-                                                Icon(Icons.Default.Fullscreen, contentDescription = null, modifier = Modifier.size(16.dp))
-                                                Spacer(modifier = Modifier.width(4.dp))
-                                                Text("Perbesar ke Pelanggan", fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
-                                            }
-
-                                            OutlinedButton(
-                                                onClick = {
-                                                    qrisPhotoPicker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
-                                                },
-                                                shape = RoundedCornerShape(8.dp),
-                                                contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 10.dp, vertical = 6.dp)
-                                            ) {
-                                                Icon(Icons.Default.AddPhotoAlternate, contentDescription = null, modifier = Modifier.size(16.dp))
-                                                Spacer(modifier = Modifier.width(4.dp))
-                                                Text("Ganti Foto QRIS", fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
-                                            }
+                                            Icon(Icons.Default.Fullscreen, contentDescription = null, modifier = Modifier.size(16.dp), tint = DeepRoyalBlue)
+                                            Spacer(modifier = Modifier.width(6.dp))
+                                            Text("Perbesar QRIS ke Pelanggan", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = DeepRoyalBlue)
                                         }
                                     }
                                 }
                             } else {
-                                // Banner informing store owner to upload their store QRIS photo
-                                Card(
-                                    shape = RoundedCornerShape(12.dp),
-                                    colors = CardDefaults.cardColors(containerColor = Color(0xFFEFF6FF)),
-                                    border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFBFDBFE)),
-                                    modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp)
-                                ) {
-                                    Column(
-                                        modifier = Modifier.padding(12.dp),
-                                        horizontalAlignment = Alignment.CenterHorizontally
-                                    ) {
-                                        Text(
-                                            text = "Foto QRIS Toko Belum Ditambahkan",
-                                            fontWeight = FontWeight.Bold,
-                                            fontSize = 13.sp,
-                                            color = DeepRoyalBlue
-                                        )
-                                        Spacer(modifier = Modifier.height(4.dp))
-                                        Text(
-                                            text = "Unggah foto QRIS toko Anda agar langsung tampil di layar saat pelanggan ingin membayar via QRIS.",
-                                            fontSize = 11.sp,
-                                            color = Color(0xFF475569),
-                                            textAlign = TextAlign.Center,
-                                            lineHeight = 15.sp
-                                        )
-                                        Spacer(modifier = Modifier.height(10.dp))
-                                        Button(
-                                            onClick = {
-                                                qrisPhotoPicker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
-                                            },
-                                            colors = ButtonDefaults.buttonColors(containerColor = DeepRoyalBlue),
-                                            shape = RoundedCornerShape(8.dp)
-                                        ) {
-                                            Icon(Icons.Default.AddPhotoAlternate, contentDescription = null, tint = CrispWhite, modifier = Modifier.size(16.dp))
-                                            Spacer(modifier = Modifier.width(6.dp))
-                                            Text("Unggah Foto QRIS Toko", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = CrispWhite)
-                                        }
-                                    }
-                                }
-
-                                Spacer(modifier = Modifier.height(12.dp))
-
                                 // Live generated QR canvas fallback
                                 val qrPayload = remember(grandTotal) {
                                     "00020101021226600016ID.CO.QRIS.WWW01189360000000000000005303360540${grandTotal.toInt()}5802ID"
@@ -998,16 +934,36 @@ fun PaymentCheckoutBottomSheet(
 
                                 Box(
                                     modifier = Modifier
-                                        .size(190.dp)
+                                        .size(200.dp)
                                         .clip(RoundedCornerShape(14.dp))
                                         .background(CrispWhite)
                                         .border(2.dp, Color(0xFFE2E8F0), RoundedCornerShape(14.dp))
                                         .padding(8.dp),
                                     contentAlignment = Alignment.Center
                                 ) {
-                                    Canvas(modifier = Modifier.size(174.dp)) {
+                                    Canvas(modifier = Modifier.size(184.dp)) {
                                         BarcodeGenerator.drawQrOnCanvas(this, qrMatrix, size.width, size.height)
                                     }
+                                }
+
+                                Spacer(modifier = Modifier.height(8.dp))
+
+                                // Notice explaining QRIS can be configured in settings
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .background(Color(0xFFEFF6FF))
+                                        .border(1.dp, Color(0xFFBFDBFE), RoundedCornerShape(8.dp))
+                                        .padding(8.dp)
+                                ) {
+                                    Text(
+                                        text = "Foto QRIS Toko dapat diunggah melalui menu Profil & Pengaturan di pojok kanan atas.",
+                                        fontSize = 11.sp,
+                                        color = DeepRoyalBlue,
+                                        textAlign = TextAlign.Center,
+                                        modifier = Modifier.fillMaxWidth()
+                                    )
                                 }
                             }
 
@@ -1037,7 +993,7 @@ fun PaymentCheckoutBottomSheet(
                             // One-tap customer payment complete & dismiss button
                             Button(
                                 onClick = {
-                                    onProcessPayment(PaymentMethod.QRIS, 0.0, "", 0.0, 0.0)
+                                    onProcessPayment(PaymentMethod.QRIS, 0.0, "", 0.0, 0.0, customerNameInput.trim())
                                 },
                                 colors = ButtonDefaults.buttonColors(containerColor = EmeraldGreen),
                                 shape = RoundedCornerShape(12.dp),
@@ -1621,8 +1577,8 @@ fun PaymentCheckoutBottomSheet(
                 Button(
                     onClick = {
                         when (selectedCategoryTab) {
-                            0 -> onProcessPayment(PaymentMethod.CASH, cashPaid, "", 0.0, 0.0)
-                            1 -> onProcessPayment(PaymentMethod.QRIS, 0.0, "", 0.0, 0.0)
+                            0 -> onProcessPayment(PaymentMethod.CASH, cashPaid, "", 0.0, 0.0, customerNameInput.trim())
+                            1 -> onProcessPayment(PaymentMethod.QRIS, 0.0, "", 0.0, 0.0, customerNameInput.trim())
                             else -> {
                                 Toast.makeText(
                                     context,
@@ -1778,7 +1734,7 @@ fun PaymentCheckoutBottomSheet(
                         Button(
                             onClick = {
                                 showFullScreenQris = false
-                                onProcessPayment(PaymentMethod.QRIS, 0.0, "", 0.0, 0.0)
+                                onProcessPayment(PaymentMethod.QRIS, 0.0, "", 0.0, 0.0, customerNameInput.trim())
                             },
                             colors = ButtonDefaults.buttonColors(containerColor = EmeraldGreen),
                             shape = RoundedCornerShape(14.dp),

@@ -890,9 +890,9 @@ fun CashierScreen(
             selectedCustomer = selectedCustomer,
             storeProfile = storeProfile,
             onUpdateQrisImage = { uri -> viewModel.updateStoreQrisImage(uri) },
-            onProcessPayment = { method, cashPaid, splitMethod2, splitAmt1, splitAmt2 ->
+            onProcessPayment = { method, cashPaid, splitMethod2, splitAmt1, splitAmt2, custName ->
                 showCheckoutDialog = false
-                viewModel.processCheckout(method, cashPaid, splitMethod2, splitAmt1, splitAmt2)
+                viewModel.processCheckout(method, cashPaid, splitMethod2, splitAmt1, splitAmt2, custName)
             },
             onDismiss = { showCheckoutDialog = false }
         )
@@ -1609,7 +1609,7 @@ fun CartItemRow(
 fun CheckoutGatewayDialog(
     grandTotal: Double,
     selectedCustomer: Customer?,
-    onProcessPayment: (method: PaymentMethod, cashPaid: Double, splitMethod2: String, splitAmt1: Double, splitAmt2: Double) -> Unit,
+    onProcessPayment: (method: PaymentMethod, cashPaid: Double, splitMethod2: String, splitAmt1: Double, splitAmt2: Double, customerName: String) -> Unit,
     onDismiss: () -> Unit
 ) {
     PaymentCheckoutBottomSheet(

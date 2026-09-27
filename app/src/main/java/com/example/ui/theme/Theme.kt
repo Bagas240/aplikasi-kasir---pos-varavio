@@ -25,27 +25,27 @@ private val LightColorScheme = lightColorScheme(
     primary = DeepRoyalBlue,
     onPrimary = CrispWhite,
     primaryContainer = LightBluePastel,
-    onPrimaryContainer = Color(0xFF0369A1),
+    onPrimaryContainer = DarkSlate,
     secondary = VibrantBlue,
     onSecondary = CrispWhite,
     secondaryContainer = LightBlueBg,
-    onSecondaryContainer = DeepRoyalBlue,
+    onSecondaryContainer = DarkSlate,
     background = SoftGrayBg,
     surface = CrispWhite,
     onBackground = DarkSlate,
     onSurface = DarkSlate,
     surfaceVariant = LightBluePastel,
-    onSurfaceVariant = Color(0xFF0369A1),
+    onSurfaceVariant = DarkSlate,
     outline = CardBorder
 )
 
 @Composable
 fun VoravioTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
+    darkTheme: Boolean = false, // Keep clean high-contrast crisp theme for POS retail registers
     dynamicColor: Boolean = false,
     content: @Composable () -> Unit
 ) {
-    val colorScheme = if (darkTheme) DarkColorScheme else LightColorScheme
+    val colorScheme = LightColorScheme
     MaterialTheme(
         colorScheme = colorScheme,
         typography = Typography,

@@ -79,6 +79,7 @@ import com.example.data.model.StaffUser
 import com.example.data.model.UserRole
 import com.example.ui.PosTab
 import com.example.ui.PosViewModel
+import com.example.ui.components.ProfileSettingsDialog
 import com.example.ui.components.StaffPinDialog
 import com.example.ui.components.ThermalReceiptDialog
 import com.example.ui.components.VoravioLogo
@@ -133,6 +134,7 @@ fun PosMasterApp(viewModel: PosViewModel = viewModel()) {
     val lastCompletedItems by viewModel.lastCompletedItems.collectAsStateWithLifecycle()
 
     var showStaffDialog by remember { mutableStateOf(false) }
+    var showProfileSettingsDialog by remember { mutableStateOf(false) }
 
     val activeShift = remember(shifts) { shifts.find { it.status == "OPEN" } }
 
@@ -367,10 +369,10 @@ fun PosMasterApp(viewModel: PosViewModel = viewModel()) {
                                     }
 
                                     IconButton(
-                                        onClick = { onboardingPhase = OnboardingPhase.STORE_SETUP },
+                                        onClick = { showProfileSettingsDialog = true },
                                         modifier = Modifier.size(32.dp)
                                     ) {
-                                        Icon(Icons.Default.Store, contentDescription = "Profil Toko", tint = CrispWhite, modifier = Modifier.size(18.dp))
+                                        Icon(Icons.Default.Store, contentDescription = "Profil & Kasir", tint = CrispWhite, modifier = Modifier.size(18.dp))
                                     }
 
                                     Spacer(modifier = Modifier.width(6.dp))
@@ -489,10 +491,10 @@ fun PosMasterApp(viewModel: PosViewModel = viewModel()) {
                                         }
 
                                         IconButton(
-                                            onClick = { onboardingPhase = OnboardingPhase.STORE_SETUP },
+                                            onClick = { showProfileSettingsDialog = true },
                                             modifier = Modifier.size(34.dp)
                                         ) {
-                                            Icon(Icons.Default.Store, contentDescription = "Profil Toko", tint = CrispWhite, modifier = Modifier.size(20.dp))
+                                            Icon(Icons.Default.Store, contentDescription = "Profil & Kasir", tint = CrispWhite, modifier = Modifier.size(20.dp))
                                         }
 
                                         Spacer(modifier = Modifier.width(4.dp))
@@ -615,6 +617,10 @@ fun PosMasterApp(viewModel: PosViewModel = viewModel()) {
                         showStaffDialog = false
                         Toast.makeText(context, "Beralih akun ke: ${newStaff.name}", Toast.LENGTH_SHORT).show()
                     },
+                    onOpenSettings = {
+                        showStaffDialog = false
+                        showProfileSettingsDialog = true
+                    },
                     onLogout = {
                         authPreferences.isLoggedIn = false
                         authPreferences.onboardingPhase = OnboardingPhase.AUTH
@@ -622,6 +628,25 @@ fun PosMasterApp(viewModel: PosViewModel = viewModel()) {
                         showStaffDialog = false
                     },
                     onDismiss = { showStaffDialog = false }
+                )
+            }
+
+            // Profile, Store & Cashier Settings Dialog
+            if (showProfileSettingsDialog) {
+                val shiftSchedules by viewModel.shiftSchedules.collectAsStateWithLifecycle()
+                ProfileSettingsDialog(
+                    viewModel = viewModel,
+                    storeProfile = storeProfile,
+                    currentUser = currentUser,
+                    staffUsers = staffUsers,
+                    shiftSchedules = shiftSchedules,
+                    onDismiss = { showProfileSettingsDialog = false },
+                    onLogout = {
+                        authPreferences.isLoggedIn = false
+                        authPreferences.onboardingPhase = OnboardingPhase.AUTH
+                        onboardingPhase = OnboardingPhase.AUTH
+                        showProfileSettingsDialog = false
+                    }
                 )
             }
         }

@@ -47,6 +47,7 @@ import androidx.compose.foundation.clickable
 import com.example.data.model.Shift
 import com.example.data.model.ShiftSchedule
 import com.example.data.model.StaffUser
+import com.example.data.model.UserRole
 import com.example.ui.theme.CrispWhite
 import com.example.ui.theme.DarkSlate
 import com.example.ui.theme.DeepRoyalBlue
@@ -67,9 +68,16 @@ fun OpenShiftDialog(
         ShiftSchedule(name = "Shift 3 (Malam)", startTime = "23:00", endTime = "07:00")
     )
     val effectiveSchedules = if (shiftSchedules.isNotEmpty()) shiftSchedules else defaultSchedules
+    var isCustomShift by remember { mutableStateOf(false) }
+    var customShiftName by remember { mutableStateOf("Shift Khusus") }
+    var customStartTime by remember { mutableStateOf("08:00") }
+    var customEndTime by remember { mutableStateOf("17:00") }
     var selectedSchedule by remember { mutableStateOf(effectiveSchedules.first()) }
 
-    var selectedCashier by remember { mutableStateOf(cashierName) }
+    val effectiveCashiers = if (staffUsers.isNotEmpty()) staffUsers else listOf(
+        StaffUser(id = "U-OWNER", name = cashierName.ifBlank { "Kasir" }, role = UserRole.OWNER, pin = "1234")
+    )
+    var selectedCashier by remember { mutableStateOf(effectiveCashiers.firstOrNull { it.name == cashierName }?.name ?: effectiveCashiers.first().name) }
     var floatInput by remember { mutableStateOf("200000") }
     val isValidFloat = (floatInput.toDoubleOrNull() ?: -1.0) >= 0.0 && floatInput.isNotBlank()
 
@@ -79,18 +87,20 @@ fun OpenShiftDialog(
             Button(
                 onClick = {
                     val amount = floatInput.toDoubleOrNull() ?: 0.0
+                    val finalSchedName = if (isCustomShift) customShiftName.ifBlank { "Shift Dinamis" } else selectedSchedule.name
+                    val finalSchedTime = if (isCustomShift) "$customStartTime - $customEndTime" else "${selectedSchedule.startTime} - ${selectedSchedule.endTime}"
                     onConfirmShift(
                         amount,
                         selectedCashier,
-                        selectedSchedule.name,
-                        "${selectedSchedule.startTime} - ${selectedSchedule.endTime}"
+                        finalSchedName,
+                        finalSchedTime
                     )
                 },
                 enabled = isValidFloat,
                 colors = ButtonDefaults.buttonColors(containerColor = DeepRoyalBlue),
                 shape = RoundedCornerShape(8.dp)
             ) {
-                Text("Buka Shift Sekarang", fontWeight = FontWeight.Bold)
+                Text("Buka Shift Sekarang", fontWeight = FontWeight.Bold, color = CrispWhite)
             }
         },
         dismissButton = {
@@ -98,7 +108,7 @@ fun OpenShiftDialog(
                 onClick = onDismiss,
                 colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent)
             ) {
-                Text("Batal", color = Color(0xFF64748B))
+                Text("Batal", color = DarkSlate, fontWeight = FontWeight.Medium)
             }
         },
         title = {
@@ -120,36 +130,88 @@ fun OpenShiftDialog(
         },
         text = {
             Column {
-                // 1. Pilih Shift
-                Text("1. Pilih Jadwal Shift:", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = DarkSlate)
-                Spacer(modifier = Modifier.height(4.dp))
+                // 1. Pilih Shift (Dinamis)
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    effectiveSchedules.take(3).forEach { sched ->
-                        val isSelected = sched.id == selectedSchedule.id || (sched.name == selectedSchedule.name)
-                        Box(
-                            modifier = Modifier
-                                .weight(1f)
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(if (isSelected) DeepRoyalBlue else Color(0xFFF1F5F9))
-                                .clickable { selectedSchedule = sched }
-                                .padding(vertical = 8.dp, horizontal = 6.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                Text(
-                                    sched.name,
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = if (isSelected) CrispWhite else DarkSlate
-                                )
-                                Text(
-                                    "${sched.startTime}-${sched.endTime}",
-                                    fontSize = 9.sp,
-                                    color = if (isSelected) CrispWhite.copy(alpha = 0.8f) else Color(0xFF64748B)
-                                )
+                    Text("1. Jadwal Shift:", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = DarkSlate)
+                    Text(
+                        text = if (isCustomShift) "Pilih Jadwal Tersimpan" else "+ Jam Kustom",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = DeepRoyalBlue,
+                        modifier = Modifier.clickable { isCustomShift = !isCustomShift }
+                    )
+                }
+                Spacer(modifier = Modifier.height(4.dp))
+
+                if (isCustomShift) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(Color(0xFFEFF6FF), RoundedCornerShape(8.dp))
+                            .border(1.dp, Color(0xFFBFDBFE), RoundedCornerShape(8.dp))
+                            .padding(8.dp)
+                    ) {
+                        OutlinedTextField(
+                            value = customShiftName,
+                            onValueChange = { customShiftName = it },
+                            label = { Text("Nama Shift Dinamis") },
+                            placeholder = { Text("Misal: Shift Pagi / Siang / Event") },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            OutlinedTextField(
+                                value = customStartTime,
+                                onValueChange = { customStartTime = it },
+                                label = { Text("Jam Mulai") },
+                                placeholder = { Text("08:00") },
+                                singleLine = true,
+                                modifier = Modifier.weight(1f)
+                            )
+                            OutlinedTextField(
+                                value = customEndTime,
+                                onValueChange = { customEndTime = it },
+                                label = { Text("Jam Selesai") },
+                                placeholder = { Text("17:00") },
+                                singleLine = true,
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                    }
+                } else {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        effectiveSchedules.take(3).forEach { sched ->
+                            val isSelected = sched.id == selectedSchedule.id || (sched.name == selectedSchedule.name)
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(if (isSelected) DeepRoyalBlue else Color(0xFFF1F5F9))
+                                    .clickable { selectedSchedule = sched }
+                                    .padding(vertical = 8.dp, horizontal = 6.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Text(
+                                        sched.name,
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = if (isSelected) CrispWhite else DarkSlate
+                                    )
+                                    Text(
+                                        "${sched.startTime}-${sched.endTime}",
+                                        fontSize = 9.sp,
+                                        color = if (isSelected) CrispWhite.copy(alpha = 0.9f) else Color(0xFF64748B)
+                                    )
+                                }
                             }
                         }
                     }
@@ -157,50 +219,48 @@ fun OpenShiftDialog(
 
                 Spacer(modifier = Modifier.height(10.dp))
 
-                // 2. Pilih Kasir
-                if (staffUsers.isNotEmpty()) {
-                    Text("2. Kasir yang Bertugas:", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = DarkSlate)
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        staffUsers.take(4).forEach { staff ->
-                            val isSelected = staff.name == selectedCashier
-                            Box(
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .clip(RoundedCornerShape(6.dp))
-                                    .background(if (isSelected) Color(0xFFEFF6FF) else Color(0xFFF8FAFC))
-                                    .border(
-                                        width = 1.dp,
-                                        color = if (isSelected) DeepRoyalBlue else Color(0xFFE2E8F0),
-                                        shape = RoundedCornerShape(6.dp)
-                                    )
-                                    .clickable { selectedCashier = staff.name }
-                                    .padding(vertical = 6.dp, horizontal = 4.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                    Text(
-                                        staff.name.split(" ").firstOrNull() ?: staff.name,
-                                        fontSize = 10.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = if (isSelected) DeepRoyalBlue else DarkSlate
-                                    )
-                                    Text(
-                                        staff.role.label,
-                                        fontSize = 8.sp,
-                                        color = if (isSelected) DeepRoyalBlue else Color(0xFF64748B)
-                                    )
-                                }
+                // 2. Pilih Kasir Bertugas
+                Text("2. Kasir yang Bertugas:", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = DarkSlate)
+                Spacer(modifier = Modifier.height(4.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    effectiveCashiers.take(4).forEach { staff ->
+                        val isSelected = staff.name == selectedCashier
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .clip(RoundedCornerShape(6.dp))
+                                .background(if (isSelected) Color(0xFFEFF6FF) else Color(0xFFF8FAFC))
+                                .border(
+                                    width = 1.dp,
+                                    color = if (isSelected) DeepRoyalBlue else Color(0xFFE2E8F0),
+                                    shape = RoundedCornerShape(6.dp)
+                                )
+                                .clickable { selectedCashier = staff.name }
+                                .padding(vertical = 6.dp, horizontal = 4.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text(
+                                    staff.name.split(" ").firstOrNull() ?: staff.name,
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (isSelected) DeepRoyalBlue else DarkSlate
+                                )
+                                Text(
+                                    staff.role.label,
+                                    fontSize = 8.sp,
+                                    color = if (isSelected) DeepRoyalBlue else Color(0xFF64748B)
+                                )
                             }
                         }
                     }
-                    Spacer(modifier = Modifier.height(10.dp))
                 }
+                Spacer(modifier = Modifier.height(10.dp))
 
-                // 3. Modal Kas Awal
+                // 3. Modal Kas Awal di Laci (Cash Float)
                 Text(
                     text = "3. Modal Kas Awal di Laci (Cash Float):",
                     fontSize = 12.sp,
@@ -226,12 +286,12 @@ fun OpenShiftDialog(
                     listOf("100000", "200000", "500000").forEach { preset ->
                         Button(
                             onClick = { floatInput = preset },
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFF1F5F9)),
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFF1F5F9), contentColor = DarkSlate),
                             contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 8.dp, vertical = 4.dp),
                             modifier = Modifier.height(30.dp),
                             shape = RoundedCornerShape(6.dp)
                         ) {
-                            Text(CurrencyFormatter.formatRupiah(preset.toDouble()), fontSize = 11.sp, color = DarkSlate)
+                            Text(CurrencyFormatter.formatRupiah(preset.toDouble()), fontSize = 11.sp, color = DarkSlate, fontWeight = FontWeight.SemiBold)
                         }
                     }
                 }

@@ -1,6 +1,7 @@
 package com.example.ui.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -53,15 +54,11 @@ fun StaffPinDialog(
     currentUser: StaffUser,
     staffUsers: List<StaffUser> = emptyList(),
     onUserSwitched: (StaffUser) -> Unit,
+    onOpenSettings: (() -> Unit)? = null,
     onLogout: (() -> Unit)? = null,
     onDismiss: () -> Unit
 ) {
-    val effectiveUsers = if (staffUsers.isNotEmpty()) staffUsers else listOf(
-        StaffUser("U-001", "Bagas (Owner)", UserRole.OWNER, "1234"),
-        StaffUser("U-002", "Dian (Manajer)", UserRole.MANAGER, "2222"),
-        StaffUser("U-003", "Rian (Kasir 1)", UserRole.CASHIER, "0000"),
-        StaffUser("U-004", "Siti (Kasir 2)", UserRole.CASHIER, "1111")
-    )
+    val effectiveUsers = if (staffUsers.isNotEmpty()) staffUsers else listOf(currentUser)
 
     var selectedTargetUser by remember(effectiveUsers) {
         mutableStateOf(effectiveUsers.firstOrNull { it.id != currentUser.id } ?: effectiveUsers.first())
@@ -83,7 +80,7 @@ fun StaffPinDialog(
                 colors = ButtonDefaults.buttonColors(containerColor = DeepRoyalBlue),
                 shape = RoundedCornerShape(8.dp)
             ) {
-                Text("Login Staff", fontWeight = FontWeight.Bold)
+                Text("Login Kasir", fontWeight = FontWeight.Bold, color = CrispWhite)
             }
         },
         dismissButton = {
@@ -93,11 +90,11 @@ fun StaffPinDialog(
                         onClick = onLogout,
                         colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent)
                     ) {
-                        Text("Keluar Akun", color = Color(0xFFDC2626))
+                        Text("Keluar", color = Color(0xFFDC2626), fontWeight = FontWeight.SemiBold)
                     }
                 }
                 Button(onClick = onDismiss, colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent)) {
-                    Text("Batal", color = Color(0xFF64748B))
+                    Text("Batal", color = DarkSlate, fontWeight = FontWeight.Medium)
                 }
             }
         },
@@ -109,18 +106,33 @@ fun StaffPinDialog(
                         .background(Color(0xFFEFF6FF), CircleShape),
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(Icons.Default.AdminPanelSettings, contentDescription = null, tint = DeepRoyalBlue)
+                    Icon(Icons.Default.Person, contentDescription = null, tint = DeepRoyalBlue)
                 }
                 Spacer(modifier = Modifier.width(8.dp))
                 Column {
-                    Text("Ganti Akun Kasir / Role", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = DarkSlate)
+                    Text("Ganti Akun Kasir", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = DarkSlate)
                     Text("Saat ini: ${currentUser.name} (${currentUser.role.label})", fontSize = 11.sp, color = Color(0xFF64748B))
                 }
             }
         },
         text = {
             Column {
-                Text("Pilih Akun Pengguna (${effectiveUsers.size} Terdaftar):", fontSize = 13.sp, fontWeight = FontWeight.Medium, color = DarkSlate)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("Pilih Kasir (${effectiveUsers.size} Terdaftar):", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = DarkSlate)
+                    if (onOpenSettings != null) {
+                        Text(
+                            text = "+ Tambah Kasir",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = DeepRoyalBlue,
+                            modifier = Modifier.clickable { onOpenSettings() }
+                        )
+                    }
+                }
                 Spacer(modifier = Modifier.height(6.dp))
 
                 effectiveUsers.forEach { staff ->
