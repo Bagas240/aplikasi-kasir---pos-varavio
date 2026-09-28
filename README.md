@@ -1,6 +1,3 @@
-#Voravio POS — Mobile Point of Sale & Smart Retail Management
-**Versi 2.0 (Stable Release)**
-
 Voravio POS adalah aplikasi kasir pintar (*Point of Sale*) dan manajemen ritel/gudang enterprise yang dibangun secara native menggunakan **Kotlin** dan **Jetpack Compose (Material 3)**. Didesain untuk kecepatan, keandalan luring (*offline-first*), serta performa tinggi bahkan pada perangkat Android berspesifikasi rendah (*low-end devices*).
 
 ##Fitur Utama Voravio POS
