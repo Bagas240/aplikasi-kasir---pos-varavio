@@ -51,7 +51,7 @@ class PosRepository(
         posDao.deleteProductsBySkus(demoSkus)
 
         // Delete legacy demo staff users so only real registered owner/staff exist
-        val demoStaffIds = listOf("U-002", "U-003", "U-004")
+        val demoStaffIds = listOf("U-001", "U-002", "U-003", "U-004")
         posDao.deleteStaffUsersByIds(demoStaffIds)
 
         // Seed Shift Schedules if empty

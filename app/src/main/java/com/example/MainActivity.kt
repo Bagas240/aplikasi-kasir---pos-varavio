@@ -368,33 +368,20 @@ fun PosMasterApp(viewModel: PosViewModel = viewModel()) {
                                         Icon(Icons.Default.HelpOutline, contentDescription = "Panduan", tint = CrispWhite, modifier = Modifier.size(18.dp))
                                     }
 
-                                    IconButton(
+                                    Surface(
                                         onClick = { showProfileSettingsDialog = true },
-                                        modifier = Modifier.size(32.dp)
+                                        shape = RoundedCornerShape(16.dp),
+                                        color = CrispWhite.copy(alpha = 0.2f),
+                                        modifier = Modifier.padding(start = 4.dp)
                                     ) {
-                                        Icon(Icons.Default.Store, contentDescription = "Profil & Kasir", tint = CrispWhite, modifier = Modifier.size(18.dp))
-                                    }
-
-                                    Spacer(modifier = Modifier.width(6.dp))
-
-                                    // Staff Role Badge (Clickable to switch staff / PIN)
-                                    Box(
-                                        modifier = Modifier
-                                            .clip(RoundedCornerShape(16.dp))
-                                            .background(CrispWhite.copy(alpha = 0.2f))
-                                            .clickable { showStaffDialog = true }
-                                            .padding(horizontal = 8.dp, vertical = 4.dp)
-                                    ) {
-                                        Row(verticalAlignment = Alignment.CenterVertically) {
-                                            Icon(
-                                                imageVector = if (currentUser.role == UserRole.OWNER) Icons.Default.AdminPanelSettings else Icons.Default.People,
-                                                contentDescription = null,
-                                                tint = CrispWhite,
-                                                modifier = Modifier.size(14.dp)
-                                            )
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                        ) {
+                                            Icon(Icons.Default.Store, contentDescription = null, tint = CrispWhite, modifier = Modifier.size(14.dp))
                                             Spacer(modifier = Modifier.width(4.dp))
                                             Text(
-                                                text = currentUser.name.take(14),
+                                                text = "Pengaturan",
                                                 color = CrispWhite,
                                                 fontSize = 11.sp,
                                                 fontWeight = FontWeight.SemiBold
@@ -474,7 +461,7 @@ fun PosMasterApp(viewModel: PosViewModel = viewModel()) {
                                                 )
                                                 Spacer(modifier = Modifier.width(5.dp))
                                                 Text(
-                                                    text = if (activeShift != null) "Shift Kasir: Aktif" else "Shift: Kasir Tutup",
+                                                    text = if (activeShift != null) "Shift: ${activeShift.cashierName}" else "Shift: Kasir Tutup",
                                                     fontSize = 11.sp,
                                                     color = CrispWhite.copy(alpha = 0.85f)
                                                 )
@@ -490,33 +477,20 @@ fun PosMasterApp(viewModel: PosViewModel = viewModel()) {
                                             Icon(Icons.Default.HelpOutline, contentDescription = "Panduan", tint = CrispWhite, modifier = Modifier.size(20.dp))
                                         }
 
-                                        IconButton(
+                                        Surface(
                                             onClick = { showProfileSettingsDialog = true },
-                                            modifier = Modifier.size(34.dp)
+                                            shape = RoundedCornerShape(20.dp),
+                                            color = CrispWhite.copy(alpha = 0.2f),
+                                            modifier = Modifier.padding(start = 4.dp)
                                         ) {
-                                            Icon(Icons.Default.Store, contentDescription = "Profil & Kasir", tint = CrispWhite, modifier = Modifier.size(20.dp))
-                                        }
-
-                                        Spacer(modifier = Modifier.width(4.dp))
-
-                                        // Staff Role Badge (Clickable to switch staff / PIN)
-                                        Box(
-                                            modifier = Modifier
-                                                .clip(RoundedCornerShape(20.dp))
-                                                .background(CrispWhite.copy(alpha = 0.2f))
-                                                .clickable { showStaffDialog = true }
-                                                .padding(horizontal = 10.dp, vertical = 5.dp)
-                                        ) {
-                                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                                Icon(
-                                                    imageVector = if (currentUser.role == UserRole.OWNER) Icons.Default.AdminPanelSettings else Icons.Default.People,
-                                                    contentDescription = null,
-                                                    tint = CrispWhite,
-                                                    modifier = Modifier.size(16.dp)
-                                                )
+                                            Row(
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
+                                            ) {
+                                                Icon(Icons.Default.Store, contentDescription = null, tint = CrispWhite, modifier = Modifier.size(16.dp))
                                                 Spacer(modifier = Modifier.width(5.dp))
                                                 Text(
-                                                    text = currentUser.name.take(12),
+                                                    text = "Pengaturan",
                                                     color = CrispWhite,
                                                     fontSize = 12.sp,
                                                     fontWeight = FontWeight.SemiBold

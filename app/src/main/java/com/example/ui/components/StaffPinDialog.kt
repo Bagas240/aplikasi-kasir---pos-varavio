@@ -216,6 +216,12 @@ fun StaffPinDialog(
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
                     visualTransformation = PasswordVisualTransformation(),
                     singleLine = true,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedTextColor = DarkSlate,
+                        unfocusedTextColor = DarkSlate,
+                        focusedLabelColor = DeepRoyalBlue,
+                        unfocusedLabelColor = Color(0xFF64748B)
+                    ),
                     modifier = Modifier.fillMaxWidth()
                 )
 

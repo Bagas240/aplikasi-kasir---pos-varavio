@@ -227,7 +227,7 @@ fun ProfileSettingsDialog(
                 val tabs = listOf(
                     Triple(0, "Toko & Bisnis", Icons.Default.Store),
                     Triple(1, "Foto QRIS", Icons.Default.QrCode),
-                    Triple(2, "Akun Kasir (${staffUsers.size})", Icons.Default.People),
+                    Triple(2, "Kasir", Icons.Default.People),
                     Triple(3, "Jadwal Shift", Icons.Default.Schedule)
                 )
 

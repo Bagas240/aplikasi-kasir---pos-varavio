@@ -34,7 +34,7 @@ private val LightColorScheme = lightColorScheme(
     surface = CrispWhite,
     onBackground = DarkSlate,
     onSurface = DarkSlate,
-    surfaceVariant = LightBluePastel,
+    surfaceVariant = Color(0xFFF1F5F9),
     onSurfaceVariant = DarkSlate,
     outline = CardBorder
 )

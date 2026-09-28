@@ -95,7 +95,7 @@ fun AddEditStaffUserDialog(
                 colors = ButtonDefaults.buttonColors(containerColor = DeepRoyalBlue),
                 shape = RoundedCornerShape(8.dp)
             ) {
-                Text(if (isEditing) "Simpan Pengguna" else "Tambah Pengguna", fontWeight = FontWeight.Bold)
+                Text(if (isEditing) "Simpan Kasir" else "Tambah Akun Kasir", fontWeight = FontWeight.Bold, color = CrispWhite)
             }
         },
         dismissButton = {
@@ -103,7 +103,7 @@ fun AddEditStaffUserDialog(
                 onClick = onDismiss,
                 colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent)
             ) {
-                Text("Batal", color = Color(0xFF64748B))
+                Text("Batal", color = DarkSlate)
             }
         },
         title = {
@@ -123,12 +123,12 @@ fun AddEditStaffUserDialog(
                 Spacer(modifier = Modifier.width(8.dp))
                 Column {
                     Text(
-                        text = if (isEditing) "Edit Data Pengguna" else "Tambah Pengguna Baru",
+                        text = if (isEditing) "Edit Akun Kasir" else "Tambah Akun Kasir",
                         fontWeight = FontWeight.Bold,
                         fontSize = 16.sp,
                         color = DarkSlate
                     )
-                    Text("Pengaturan hak akses & password akun", fontSize = 11.sp, color = Color(0xFF64748B))
+                    Text("Buat akun kasir untuk operasional toko", fontSize = 11.sp, color = Color(0xFF64748B))
                 }
             }
         },
@@ -141,9 +141,15 @@ fun AddEditStaffUserDialog(
                         name = it
                         errorMessage = null
                     },
-                    label = { Text("Nama Pengguna / Kasir") },
-                    placeholder = { Text("Contoh: Kasir 1 / Kasir 2 / Manajer") },
+                    label = { Text("Nama Kasir / Karyawan") },
+                    placeholder = { Text("Contoh: Kasir 1 / Kasir 2 / Manajer / Budi") },
                     singleLine = true,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedTextColor = DarkSlate,
+                        unfocusedTextColor = DarkSlate,
+                        focusedLabelColor = DeepRoyalBlue,
+                        unfocusedLabelColor = Color(0xFF64748B)
+                    ),
                     modifier = Modifier.fillMaxWidth()
                 )
 

@@ -46,13 +46,34 @@ enum class PosTab(val title: String) {
 
 class PosViewModel(application: Application) : AndroidViewModel(application) {
 
+    private val authPreferences = AuthPreferences(application)
     private val repository: PosRepository
+
+    // AUTH / STAFF
+    private val _currentUser = MutableStateFlow(
+        StaffUser(
+            id = "U-OWNER",
+            name = authPreferences.fullName.ifBlank { authPreferences.username.ifBlank { "Owner" } },
+            role = UserRole.OWNER,
+            pin = authPreferences.pin.ifBlank { "1234" }
+        )
+    )
+    val currentUser: StateFlow<StaffUser> = _currentUser.asStateFlow()
+
     init {
         val database = AppDatabase.getDatabase(application)
         val appCache = (application as? VoravioApplication)?.productCache
         repository = if (appCache != null) PosRepository(database.posDao(), appCache) else PosRepository(database.posDao())
         viewModelScope.launch {
             repository.seedInitialDataIfNeeded()
+            // Ensure the primary Owner account is present in database
+            val owner = StaffUser(
+                id = "U-OWNER",
+                name = authPreferences.fullName.ifBlank { authPreferences.username.ifBlank { "Owner" } },
+                role = UserRole.OWNER,
+                pin = authPreferences.pin.ifBlank { "1234" }
+            )
+            repository.insertStaffUser(owner)
         }
         viewModelScope.launch {
             repository.allProducts.collect { productList ->
@@ -65,19 +86,13 @@ class PosViewModel(application: Application) : AndroidViewModel(application) {
                     val matching = users.find { it.id == _currentUser.value.id }
                     if (matching != null) {
                         _currentUser.value = matching
-                    } else if (_currentUser.value.id == "U-001") {
+                    } else {
                         _currentUser.value = users.first()
                     }
                 }
             }
         }
     }
-
-    // AUTH / STAFF
-    private val _currentUser = MutableStateFlow(
-        StaffUser(id = "U-001", name = "Bagas (Owner)", role = UserRole.OWNER, pin = "1234")
-    )
-    val currentUser: StateFlow<StaffUser> = _currentUser.asStateFlow()
 
     // NAVIGATION
     private val _currentTab = MutableStateFlow(PosTab.CASHIER)
@@ -503,6 +518,7 @@ class PosViewModel(application: Application) : AndroidViewModel(application) {
         shiftScheduleTime: String = "07:00 - 15:00"
     ) {
         val selectedUser = staffUsers.value.find { it.name == cashierName } ?: _currentUser.value
+        _currentUser.value = selectedUser
         viewModelScope.launch {
             repository.openShift(
                 cashierName = cashierName,
