@@ -32,6 +32,7 @@ data class ShiftSchedule(
     val name: String,
     val startTime: String = "07:00",
     val endTime: String = "15:00",
+    val assignedCashierName: String = "",
     val isActive: Boolean = true,
     val notes: String = ""
 )

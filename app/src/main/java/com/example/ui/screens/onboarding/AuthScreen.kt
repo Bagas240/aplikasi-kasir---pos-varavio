@@ -88,9 +88,9 @@ fun AuthScreen(
     var loginError by remember { mutableStateOf<String?>(null) }
 
     // Quick Setup Form State (Nama Toko + Username + PIN)
-    var setupStoreName by remember { mutableStateOf(authPreferences.storeName.ifBlank { "Voravio Mart" }) }
-    var setupUsername by remember { mutableStateOf(authPreferences.username.ifBlank { "admin" }) }
-    var setupPin by remember { mutableStateOf(if (hasExistingAccount) authPreferences.pin else "1234") }
+    var setupStoreName by remember { mutableStateOf(authPreferences.storeName) }
+    var setupUsername by remember { mutableStateOf(authPreferences.username) }
+    var setupPin by remember { mutableStateOf(if (hasExistingAccount) authPreferences.pin else "") }
     var showSetupPin by remember { mutableStateOf(false) }
     var setupError by remember { mutableStateOf<String?>(null) }
 

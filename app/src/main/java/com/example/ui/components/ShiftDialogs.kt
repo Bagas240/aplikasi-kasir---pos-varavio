@@ -62,22 +62,25 @@ fun OpenShiftDialog(
     onConfirmShift: (startingFloat: Double, cashierName: String, scheduleName: String, scheduleTime: String) -> Unit,
     onDismiss: () -> Unit
 ) {
-    val defaultSchedules = listOf(
-        ShiftSchedule(name = "Shift 1 (Pagi)", startTime = "07:00", endTime = "15:00"),
-        ShiftSchedule(name = "Shift 2 (Sore)", startTime = "15:00", endTime = "23:00"),
-        ShiftSchedule(name = "Shift 3 (Malam)", startTime = "23:00", endTime = "07:00")
-    )
-    val effectiveSchedules = if (shiftSchedules.isNotEmpty()) shiftSchedules else defaultSchedules
-    var isCustomShift by remember { mutableStateOf(false) }
-    var customShiftName by remember { mutableStateOf("Shift Khusus") }
+    val effectiveSchedules = shiftSchedules
+    var isCustomShift by remember { mutableStateOf(effectiveSchedules.isEmpty()) }
+    var customShiftName by remember { mutableStateOf("Shift 1 (Pagi)") }
     var customStartTime by remember { mutableStateOf("08:00") }
-    var customEndTime by remember { mutableStateOf("17:00") }
-    var selectedSchedule by remember { mutableStateOf(effectiveSchedules.first()) }
+    var customEndTime by remember { mutableStateOf("16:00") }
+    var selectedSchedule by remember { mutableStateOf(effectiveSchedules.firstOrNull() ?: ShiftSchedule(name = "Shift 1 (Pagi)", startTime = "08:00", endTime = "16:00")) }
 
     val effectiveCashiers = if (staffUsers.isNotEmpty()) staffUsers else listOf(
-        StaffUser(id = "U-OWNER", name = cashierName.ifBlank { "Kasir" }, role = UserRole.OWNER, pin = "1234")
+        StaffUser(id = "U-OWNER", name = cashierName.ifBlank { "Kasir 1" }, role = UserRole.OWNER, pin = "1234")
     )
-    var selectedCashier by remember { mutableStateOf(effectiveCashiers.firstOrNull { it.name == cashierName }?.name ?: effectiveCashiers.first().name) }
+    var selectedCashier by remember {
+        mutableStateOf(
+            if (selectedSchedule.assignedCashierName.isNotBlank() && effectiveCashiers.any { it.name == selectedSchedule.assignedCashierName }) {
+                selectedSchedule.assignedCashierName
+            } else {
+                effectiveCashiers.firstOrNull { it.name == cashierName }?.name ?: effectiveCashiers.first().name
+            }
+        )
+    }
     var floatInput by remember { mutableStateOf("200000") }
     val isValidFloat = (floatInput.toDoubleOrNull() ?: -1.0) >= 0.0 && floatInput.isNotBlank()
 

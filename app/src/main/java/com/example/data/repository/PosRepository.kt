@@ -54,17 +54,7 @@ class PosRepository(
         val demoStaffIds = listOf("U-001", "U-002", "U-003", "U-004")
         posDao.deleteStaffUsersByIds(demoStaffIds)
 
-        // Seed Shift Schedules if empty
-        val existingSchedules = posDao.getAllShiftSchedules().firstOrNull()
-        if (existingSchedules.isNullOrEmpty()) {
-            posDao.insertShiftSchedules(
-                listOf(
-                    ShiftSchedule(name = "Shift 1 (Pagi)", startTime = "07:00", endTime = "15:00", notes = "Shift pagi operasional utama"),
-                    ShiftSchedule(name = "Shift 2 (Sore)", startTime = "15:00", endTime = "23:00", notes = "Shift sore hingga malam"),
-                    ShiftSchedule(name = "Shift 3 (Malam)", startTime = "23:00", endTime = "07:00", notes = "Shift malam / 24 jam")
-                )
-            )
-        }
+        // Shift schedules start empty so user can dynamically configure shift 1, 2, etc. using (+) button
     }
 
     suspend fun getProductById(id: Long): Product? {

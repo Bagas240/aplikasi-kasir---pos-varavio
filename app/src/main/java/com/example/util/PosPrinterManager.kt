@@ -164,6 +164,21 @@ object PosPrinterManager {
             }
 
             Toast.makeText(context, "Berhasil diunduh! File tersimpan: $fileName", Toast.LENGTH_LONG).show()
+
+            // Open share / view chooser so user can easily open or send the file
+            if (savedUri != null) {
+                try {
+                    val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                        type = "image/png"
+                        putExtra(Intent.EXTRA_STREAM, savedUri)
+                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    }
+                    val chooser = Intent.createChooser(shareIntent, "Buka / Bagikan File Label").apply {
+                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    }
+                    context.startActivity(chooser)
+                } catch (_: Exception) {}
+            }
         } catch (e: Exception) {
             e.printStackTrace()
             Toast.makeText(context, "Gagal mengunduh file: ${e.message}", Toast.LENGTH_SHORT).show()

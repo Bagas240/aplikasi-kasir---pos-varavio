@@ -286,6 +286,7 @@ fun ShiftReportsScreen(
 
     if (showAddScheduleDialog) {
         AddEditShiftScheduleDialog(
+            staffUsers = staffUsers,
             onSave = {
                 viewModel.saveShiftSchedule(it)
                 showAddScheduleDialog = false
@@ -297,6 +298,7 @@ fun ShiftReportsScreen(
     if (scheduleToEdit != null) {
         AddEditShiftScheduleDialog(
             initialSchedule = scheduleToEdit,
+            staffUsers = staffUsers,
             onSave = {
                 viewModel.saveShiftSchedule(it)
                 scheduleToEdit = null
@@ -729,6 +731,21 @@ private fun ShiftScheduleManagementContent(
                                             fontWeight = FontWeight.Bold,
                                             color = EmeraldDark
                                         )
+                                    }
+                                    if (schedule.assignedCashierName.isNotBlank()) {
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        Box(
+                                            modifier = Modifier
+                                                .background(DeepRoyalBlue.copy(alpha = 0.12f), RoundedCornerShape(4.dp))
+                                                .padding(horizontal = 6.dp, vertical = 2.dp)
+                                        ) {
+                                            Text(
+                                                "Kasir: ${schedule.assignedCashierName}",
+                                                fontSize = 10.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = DeepRoyalBlue
+                                            )
+                                        }
                                     }
                                     if (schedule.notes.isNotBlank()) {
                                         Spacer(modifier = Modifier.width(6.dp))

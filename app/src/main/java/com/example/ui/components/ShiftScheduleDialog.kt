@@ -8,10 +8,12 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material3.AlertDialog
@@ -31,19 +33,32 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import com.example.data.model.ShiftSchedule
+import com.example.data.model.StaffUser
+import com.example.ui.theme.CrispWhite
 import com.example.ui.theme.DarkSlate
 import com.example.ui.theme.DeepRoyalBlue
+import com.example.ui.theme.EmeraldDark
+import com.example.ui.theme.EmeraldGreen
 
 @Composable
 fun AddEditShiftScheduleDialog(
     initialSchedule: ShiftSchedule? = null,
+    staffUsers: List<StaffUser> = emptyList(),
     onSave: (ShiftSchedule) -> Unit,
     onDismiss: () -> Unit
 ) {
     var name by remember { mutableStateOf(initialSchedule?.name ?: "") }
-    var startTime by remember { mutableStateOf(initialSchedule?.startTime ?: "07:00") }
-    var endTime by remember { mutableStateOf(initialSchedule?.endTime ?: "15:00") }
+    var startTime by remember { mutableStateOf(initialSchedule?.startTime ?: "08:00") }
+    var endTime by remember { mutableStateOf(initialSchedule?.endTime ?: "16:00") }
+    var assignedCashierName by remember { mutableStateOf(initialSchedule?.assignedCashierName ?: "") }
     var notes by remember { mutableStateOf(initialSchedule?.notes ?: "") }
     var errorMessage by remember { mutableStateOf<String?>(null) }
 
@@ -55,22 +70,24 @@ fun AddEditShiftScheduleDialog(
             Button(
                 onClick = {
                     if (name.isBlank()) {
-                        errorMessage = "Nama shift wajib diisi (misal: Shift 1 (Pagi))"
+                        errorMessage = "Nama shift wajib diisi (misal: Shift 1 / Pagi)"
                         return@Button
                     }
                     if (startTime.isBlank() || endTime.isBlank()) {
-                        errorMessage = "Jam mulai dan jam selesai harus diatur (misal: 07:00 dan 15:00)"
+                        errorMessage = "Jam mulai dan jam selesai harus diatur (misal: 08:00 s/d 16:00)"
                         return@Button
                     }
                     val schedule = (initialSchedule ?: ShiftSchedule(
                         name = name.trim(),
                         startTime = startTime.trim(),
                         endTime = endTime.trim(),
+                        assignedCashierName = assignedCashierName.trim(),
                         notes = notes.trim()
                     )).copy(
                         name = name.trim(),
                         startTime = startTime.trim(),
                         endTime = endTime.trim(),
+                        assignedCashierName = assignedCashierName.trim(),
                         notes = notes.trim()
                     )
                     onSave(schedule)
@@ -107,12 +124,36 @@ fun AddEditShiftScheduleDialog(
                         fontSize = 16.sp,
                         color = DarkSlate
                     )
-                    Text("Atur pembagian jam kerja kasir", fontSize = 11.sp, color = Color(0xFF64748B))
+                    Text("Atur nama, rentang jam kerja & petugas kasir", fontSize = 11.sp, color = Color(0xFF64748B))
                 }
             }
         },
         text = {
             Column(modifier = Modifier.fillMaxWidth()) {
+                // Quick Name Presets
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    listOf("Shift 1", "Shift 2", "Shift 3", "Shift 4").forEach { preset ->
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .clip(RoundedCornerShape(6.dp))
+                                .background(if (name.startsWith(preset)) DeepRoyalBlue.copy(alpha = 0.12f) else Color(0xFFF1F5F9))
+                                .clickable {
+                                    name = "$preset (${if (preset == "Shift 1") "Pagi" else if (preset == "Shift 2") "Siang/Sore" else if (preset == "Shift 3") "Malam" else "Lembur"})"
+                                }
+                                .padding(vertical = 6.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(preset, fontSize = 11.sp, fontWeight = FontWeight.Bold, color = if (name.startsWith(preset)) DeepRoyalBlue else DarkSlate)
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(10.dp))
+
                 OutlinedTextField(
                     value = name,
                     onValueChange = {
@@ -120,7 +161,7 @@ fun AddEditShiftScheduleDialog(
                         errorMessage = null
                     },
                     label = { Text("Nama Shift") },
-                    placeholder = { Text("Contoh: Shift 1 (Pagi) / Shift 2 (Sore)") },
+                    placeholder = { Text("Contoh: Shift 1 / Shift Pagi / Shift Siang") },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -138,7 +179,7 @@ fun AddEditShiftScheduleDialog(
                             errorMessage = null
                         },
                         label = { Text("Mulai Jam") },
-                        placeholder = { Text("07:00") },
+                        placeholder = { Text("08:00") },
                         singleLine = true,
                         modifier = Modifier.weight(1f)
                     )
@@ -150,37 +191,56 @@ fun AddEditShiftScheduleDialog(
                             errorMessage = null
                         },
                         label = { Text("Sampai Jam") },
-                        placeholder = { Text("15:00") },
+                        placeholder = { Text("16:00") },
                         singleLine = true,
                         modifier = Modifier.weight(1f)
                     )
                 }
 
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(10.dp))
 
-                // Presets
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    listOf(
-                        Triple("Shift 1 (Pagi)", "07:00", "15:00"),
-                        Triple("Shift 2 (Sore)", "15:00", "23:00"),
-                        Triple("Shift 3 (Malam)", "23:00", "07:00")
-                    ).forEach { (presetName, start, end) ->
-                        Button(
-                            onClick = {
-                                name = presetName
-                                startTime = start
-                                endTime = end
-                            },
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFF1F5F9)),
-                            shape = RoundedCornerShape(6.dp),
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Text(start.take(2) + "-" + end.take(2), fontSize = 10.sp, color = DarkSlate)
+                // Cashier Selection for this Shift
+                Text("Petugas Kasir Bertanggung Jawab:", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = DarkSlate)
+                Spacer(modifier = Modifier.height(4.dp))
+                if (staffUsers.isNotEmpty()) {
+                    LazyRow(
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        item {
+                            val isAll = assignedCashierName.isBlank()
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(6.dp))
+                                    .background(if (isAll) DeepRoyalBlue else Color(0xFFF1F5F9))
+                                    .clickable { assignedCashierName = "" }
+                                    .padding(horizontal = 10.dp, vertical = 6.dp)
+                            ) {
+                                Text("Semua Kasir", fontSize = 11.sp, color = if (isAll) CrispWhite else DarkSlate, fontWeight = FontWeight.Bold)
+                            }
+                        }
+                        items(staffUsers) { staff ->
+                            val isSelected = assignedCashierName == staff.name
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(6.dp))
+                                    .background(if (isSelected) DeepRoyalBlue else Color(0xFFF1F5F9))
+                                    .clickable { assignedCashierName = staff.name }
+                                    .padding(horizontal = 10.dp, vertical = 6.dp)
+                            ) {
+                                Text(staff.name, fontSize = 11.sp, color = if (isSelected) CrispWhite else DarkSlate, fontWeight = FontWeight.Bold)
+                            }
                         }
                     }
+                } else {
+                    OutlinedTextField(
+                        value = assignedCashierName,
+                        onValueChange = { assignedCashierName = it },
+                        label = { Text("Nama Kasir") },
+                        placeholder = { Text("Contoh: Kasir 1 / Budi (Bisa ditambah di Pengaturan)") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
                 }
 
                 Spacer(modifier = Modifier.height(10.dp))
@@ -189,7 +249,7 @@ fun AddEditShiftScheduleDialog(
                     value = notes,
                     onValueChange = { notes = it },
                     label = { Text("Catatan / Keterangan (Opsional)") },
-                    placeholder = { Text("Misal: Termasuk 30 menit serah terima kasir") },
+                    placeholder = { Text("Misal: Serah terima uang kas di laci") },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )

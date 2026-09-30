@@ -846,6 +846,7 @@ fun ProfileSettingsDialog(
         val targetSched = scheduleToEdit
         AddEditShiftScheduleDialog(
             initialSchedule = targetSched,
+            staffUsers = staffUsers,
             onSave = { savedSched ->
                 if (targetSched == null) {
                     viewModel.addShiftSchedule(savedSched)

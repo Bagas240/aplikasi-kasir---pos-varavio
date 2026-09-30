@@ -62,7 +62,7 @@ class AuthPreferences(context: Context) {
         set(value) = prefs.edit().putString(KEY_AUTH_PASSWORD, value).apply()
 
     var fullName: String
-        get() = prefs.getString(KEY_AUTH_FULL_NAME, "Admin Owner") ?: "Admin Owner"
+        get() = prefs.getString(KEY_AUTH_FULL_NAME, "") ?: ""
         set(value) = prefs.edit().putString(KEY_AUTH_FULL_NAME, value).apply()
 
     var role: UserRole
@@ -73,26 +73,19 @@ class AuthPreferences(context: Context) {
         set(value) = prefs.edit().putString(KEY_AUTH_ROLE, value.name).apply()
 
     var pin: String
-        get() = prefs.getString(KEY_AUTH_PIN, "1234") ?: "1234"
+        get() = prefs.getString(KEY_AUTH_PIN, "") ?: ""
         set(value) = prefs.edit().putString(KEY_AUTH_PIN, value).apply()
 
     var storeName: String
-        get() {
-            val stored = prefs.getString(KEY_STORE_NAME, "VORAVIO MART") ?: "VORAVIO MART"
-            if (stored.isBlank() || stored.contains("SENTOSA", ignoreCase = true) || stored.contains("Forapos", ignoreCase = true)) {
-                prefs.edit().putString(KEY_STORE_NAME, "VORAVIO MART").apply()
-                return "VORAVIO MART"
-            }
-            return stored
-        }
+        get() = prefs.getString(KEY_STORE_NAME, "") ?: ""
         set(value) = prefs.edit().putString(KEY_STORE_NAME, value).apply()
 
     var storeAddress: String
-        get() = prefs.getString(KEY_STORE_ADDRESS, "Jl. Thamrin No. 88, Jakarta Pusat") ?: "Jl. Thamrin No. 88, Jakarta Pusat"
+        get() = prefs.getString(KEY_STORE_ADDRESS, "") ?: ""
         set(value) = prefs.edit().putString(KEY_STORE_ADDRESS, value).apply()
 
     var storePhone: String
-        get() = prefs.getString(KEY_STORE_PHONE, "+62 812-3456-7890") ?: "+62 812-3456-7890"
+        get() = prefs.getString(KEY_STORE_PHONE, "") ?: ""
         set(value) = prefs.edit().putString(KEY_STORE_PHONE, value).apply()
 
     var storeLogoUri: String?
@@ -108,9 +101,9 @@ class AuthPreferences(context: Context) {
         set(value) = prefs.edit().putBoolean(KEY_TUTORIAL_COMPLETED, value).apply()
 
     fun setupInitialAccountAndStore(store: String, user: String, userPin: String) {
-        val sName = store.ifBlank { "VORAVIO MART" }.trim()
-        val uName = user.ifBlank { "admin" }.trim()
-        val pCode = userPin.ifBlank { "1234" }.trim()
+        val sName = store.trim()
+        val uName = user.trim()
+        val pCode = userPin.trim()
         prefs.edit()
             .putString(KEY_STORE_NAME, sName)
             .putString(KEY_AUTH_USERNAME, uName)
