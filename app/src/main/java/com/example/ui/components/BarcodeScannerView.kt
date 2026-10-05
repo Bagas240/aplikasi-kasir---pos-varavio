@@ -406,10 +406,10 @@ fun BarcodeScannerView(
                         Spacer(modifier = Modifier.height(8.dp))
                         Button(
                             onClick = { permissionLauncher.launch(Manifest.permission.CAMERA) },
-                            colors = ButtonDefaults.buttonColors(containerColor = VibrantBlue),
+                            colors = ButtonDefaults.buttonColors(containerColor = VibrantBlue, contentColor = CrispWhite),
                             shape = RoundedCornerShape(8.dp)
                         ) {
-                            Text("Izinkan Kamera", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                            Text("Izinkan Kamera", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = CrispWhite)
                         }
                     }
                 }
@@ -548,13 +548,13 @@ fun BarcodeScannerView(
                             manualInput = ""
                         }
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = EmeraldGreen),
+                    colors = ButtonDefaults.buttonColors(containerColor = EmeraldGreen, contentColor = CrispWhite),
                     shape = RoundedCornerShape(8.dp),
                     modifier = Modifier
                         .height(48.dp)
                         .testTag("scanner_manual_submit_btn")
                 ) {
-                    Text("Input", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                    Text("Input", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = CrispWhite)
                 }
             }
 

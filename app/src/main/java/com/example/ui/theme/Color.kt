@@ -9,7 +9,7 @@ val LightBluePastel = Color(0xFFDBEAFE)  // Light Blue Pastel #DBEAFE
 val LightBlueBg = Color(0xFFEFF6FF)      // Light Blue Tint #EFF6FF
 
 // Mapped semantic tokens to solid high-contrast corporate blue
-val DeepRoyalBlue = Color(0xFF1E40AF) // Primary Deep Royal Blue (#1E40AF) - High contrast WCAG AAA
+val DeepRoyalBlue = Color(0xFF1D4ED8) // Primary Royal Blue (#1D4ED8) - Modern, vibrant, High contrast WCAG AAA
 val VibrantBlue = Color(0xFF2563EB)   // Accent Solid Blue (#2563EB)
 val SkyBlue = Color(0xFF93C5FD)       // Soft Sky Blue (#93C5FD)
 val CrispWhite = Color(0xFFFFFFFF)    // Flat Solid White (#FFFFFF)

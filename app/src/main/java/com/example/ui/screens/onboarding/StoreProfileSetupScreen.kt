@@ -528,7 +528,7 @@ fun StoreProfileSetupScreen(
                             )
                             onProfileSaved(profile)
                         },
-                        colors = ButtonDefaults.buttonColors(containerColor = DeepRoyalBlue),
+                        colors = ButtonDefaults.buttonColors(containerColor = DeepRoyalBlue, contentColor = CrispWhite),
                         shape = RoundedCornerShape(10.dp),
                         modifier = Modifier
                             .fillMaxWidth()
@@ -537,7 +537,7 @@ fun StoreProfileSetupScreen(
                     ) {
                         Text("Lanjut ke Panduan Interaktif", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = CrispWhite)
                         Spacer(modifier = Modifier.width(8.dp))
-                        Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null, tint = CrispWhite, modifier = Modifier.size(16.dp))
                     }
                 }
             }

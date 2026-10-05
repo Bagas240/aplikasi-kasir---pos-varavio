@@ -92,10 +92,10 @@ fun AddEditShiftScheduleDialog(
                     )
                     onSave(schedule)
                 },
-                colors = ButtonDefaults.buttonColors(containerColor = DeepRoyalBlue),
+                colors = ButtonDefaults.buttonColors(containerColor = DeepRoyalBlue, contentColor = CrispWhite),
                 shape = RoundedCornerShape(8.dp)
             ) {
-                Text(if (isEditing) "Simpan Perubahan" else "Tambah Shift", fontWeight = FontWeight.Bold)
+                Text(if (isEditing) "Simpan Perubahan" else "Tambah Shift", fontWeight = FontWeight.Bold, color = CrispWhite)
             }
         },
         dismissButton = {

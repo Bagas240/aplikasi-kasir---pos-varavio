@@ -168,7 +168,7 @@ fun RecentSalesContent(
                 if (onExportClick != null) {
                     Button(
                         onClick = onExportClick,
-                        colors = ButtonDefaults.buttonColors(containerColor = DeepRoyalBlue),
+                        colors = ButtonDefaults.buttonColors(containerColor = DeepRoyalBlue, contentColor = CrispWhite),
                         shape = RoundedCornerShape(8.dp),
                         contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp),
                         modifier = Modifier.testTag("recent_sales_export_button")
@@ -176,10 +176,11 @@ fun RecentSalesContent(
                         Icon(
                             imageVector = Icons.Default.FileDownload,
                             contentDescription = null,
+                            tint = CrispWhite,
                             modifier = Modifier.size(15.dp)
                         )
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text("Ekspor CSV", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        Text("Ekspor CSV", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = CrispWhite)
                     }
                     Spacer(modifier = Modifier.width(6.dp))
                 }
@@ -302,13 +303,13 @@ fun RecentSalesContent(
             Spacer(modifier = Modifier.height(10.dp))
             Button(
                 onClick = onClose,
-                colors = ButtonDefaults.buttonColors(containerColor = DeepRoyalBlue),
+                colors = ButtonDefaults.buttonColors(containerColor = DeepRoyalBlue, contentColor = CrispWhite),
                 shape = RoundedCornerShape(10.dp),
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(44.dp)
             ) {
-                Text("Tutup", fontWeight = FontWeight.Bold)
+                Text("Tutup", fontWeight = FontWeight.Bold, color = CrispWhite)
             }
         }
     }

@@ -95,12 +95,12 @@ fun InventoryScreen(
                 if (activeTab == 1) {
                     Button(
                         onClick = { showCreatePODialog = true },
-                        colors = ButtonDefaults.buttonColors(containerColor = DeepRoyalBlue),
+                        colors = ButtonDefaults.buttonColors(containerColor = DeepRoyalBlue, contentColor = CrispWhite),
                         shape = RoundedCornerShape(8.dp)
                     ) {
-                        Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp), tint = CrispWhite)
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text("Buat PO", fontSize = 12.sp)
+                        Text("Buat PO", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = CrispWhite)
                     }
                 }
             }
@@ -190,12 +190,12 @@ fun InventoryScreen(
 
                                     Button(
                                         onClick = { productForAdjustment = prod },
-                                        colors = ButtonDefaults.buttonColors(containerColor = DeepRoyalBlue),
+                                        colors = ButtonDefaults.buttonColors(containerColor = DeepRoyalBlue, contentColor = CrispWhite),
                                         shape = RoundedCornerShape(6.dp)
                                     ) {
-                                        Icon(Icons.Default.Tune, contentDescription = null, modifier = Modifier.size(14.dp))
+                                        Icon(Icons.Default.Tune, contentDescription = null, modifier = Modifier.size(14.dp), tint = CrispWhite)
                                         Spacer(modifier = Modifier.width(4.dp))
-                                        Text("Opname", fontSize = 11.sp)
+                                        Text("Opname", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = CrispWhite)
                                     }
                                 }
                             }
@@ -338,9 +338,9 @@ fun InventoryScreen(
                         productForAdjustment = null
                     },
                     enabled = (qtyChangeInput.toIntOrNull() ?: 0) > 0,
-                    colors = ButtonDefaults.buttonColors(containerColor = DeepRoyalBlue)
+                    colors = ButtonDefaults.buttonColors(containerColor = DeepRoyalBlue, contentColor = CrispWhite)
                 ) {
-                    Text("Terapkan Koreksi Stok")
+                    Text("Terapkan Koreksi Stok", color = CrispWhite, fontWeight = FontWeight.Bold)
                 }
             },
             dismissButton = {
@@ -420,9 +420,9 @@ fun InventoryScreen(
                         showCreatePODialog = false
                     },
                     enabled = poNumber.isNotBlank() && supplier.isNotBlank() && (costInput.toDoubleOrNull() ?: 0.0) > 0,
-                    colors = ButtonDefaults.buttonColors(containerColor = DeepRoyalBlue)
+                    colors = ButtonDefaults.buttonColors(containerColor = DeepRoyalBlue, contentColor = CrispWhite)
                 ) {
-                    Text("Buat PO Baru")
+                    Text("Buat PO Baru", color = CrispWhite, fontWeight = FontWeight.Bold)
                 }
             },
             dismissButton = {

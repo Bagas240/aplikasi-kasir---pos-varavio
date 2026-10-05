@@ -427,13 +427,13 @@ fun ProfileSettingsDialog(
                                                 viewModel.updateStoreProfile(updated)
                                                 Toast.makeText(context, "Profil toko berhasil disimpan!", Toast.LENGTH_SHORT).show()
                                             },
-                                            colors = ButtonDefaults.buttonColors(containerColor = DeepRoyalBlue),
+                                            colors = ButtonDefaults.buttonColors(containerColor = DeepRoyalBlue, contentColor = CrispWhite),
                                             shape = RoundedCornerShape(8.dp),
                                             modifier = Modifier.fillMaxWidth().height(46.dp)
                                         ) {
                                             Icon(Icons.Default.Check, contentDescription = null, tint = CrispWhite, modifier = Modifier.size(18.dp))
                                             Spacer(modifier = Modifier.width(6.dp))
-                                            Text("Simpan Informasi Toko", fontWeight = FontWeight.Bold)
+                                            Text("Simpan Informasi Toko", fontWeight = FontWeight.Bold, color = CrispWhite)
                                         }
                                     }
                                 }
@@ -533,22 +533,22 @@ fun ProfileSettingsDialog(
                                         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                                             Button(
                                                 onClick = { qrisPickerLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) },
-                                                colors = ButtonDefaults.buttonColors(containerColor = DeepRoyalBlue),
+                                                colors = ButtonDefaults.buttonColors(containerColor = DeepRoyalBlue, contentColor = CrispWhite),
                                                 shape = RoundedCornerShape(8.dp)
                                             ) {
                                                 Icon(Icons.Default.PhotoLibrary, contentDescription = null, tint = CrispWhite, modifier = Modifier.size(16.dp))
                                                 Spacer(modifier = Modifier.width(6.dp))
-                                                Text("Pilih dari Galeri", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                                                Text("Pilih dari Galeri", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = CrispWhite)
                                             }
 
                                             Button(
                                                 onClick = { qrisCameraLauncher.launch(null) },
-                                                colors = ButtonDefaults.buttonColors(containerColor = EmeraldGreen),
+                                                colors = ButtonDefaults.buttonColors(containerColor = EmeraldGreen, contentColor = CrispWhite),
                                                 shape = RoundedCornerShape(8.dp)
                                             ) {
                                                 Icon(Icons.Default.CameraAlt, contentDescription = null, tint = CrispWhite, modifier = Modifier.size(16.dp))
                                                 Spacer(modifier = Modifier.width(6.dp))
-                                                Text("Buka Kamera", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                                                Text("Buka Kamera", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = CrispWhite)
                                             }
                                         }
 
@@ -586,12 +586,12 @@ fun ProfileSettingsDialog(
 
                                     Button(
                                         onClick = { showAddStaffDialog = true },
-                                        colors = ButtonDefaults.buttonColors(containerColor = DeepRoyalBlue),
+                                        colors = ButtonDefaults.buttonColors(containerColor = DeepRoyalBlue, contentColor = CrispWhite),
                                         shape = RoundedCornerShape(8.dp)
                                     ) {
                                         Icon(Icons.Default.Add, contentDescription = null, tint = CrispWhite, modifier = Modifier.size(16.dp))
                                         Spacer(modifier = Modifier.width(4.dp))
-                                        Text("Tambah Kasir", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                        Text("Tambah Kasir", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = CrispWhite)
                                     }
                                 }
 
@@ -711,12 +711,12 @@ fun ProfileSettingsDialog(
 
                                     Button(
                                         onClick = { showAddScheduleDialog = true },
-                                        colors = ButtonDefaults.buttonColors(containerColor = DeepRoyalBlue),
+                                        colors = ButtonDefaults.buttonColors(containerColor = DeepRoyalBlue, contentColor = CrispWhite),
                                         shape = RoundedCornerShape(8.dp)
                                     ) {
                                         Icon(Icons.Default.Add, contentDescription = null, tint = CrispWhite, modifier = Modifier.size(16.dp))
                                         Spacer(modifier = Modifier.width(4.dp))
-                                        Text("Tambah Shift", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                        Text("Tambah Shift", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = CrispWhite)
                                     }
                                 }
 

@@ -308,13 +308,13 @@ fun BarcodeCenterScreen(
                                     viewModel.saveProduct(activeProduct.copy(barcode = generatedCode))
                                     Toast.makeText(context, "Barcode ZXing dibuat dari ID: $generatedCode", Toast.LENGTH_SHORT).show()
                                 },
-                                colors = ButtonDefaults.buttonColors(containerColor = DeepRoyalBlue),
+                                colors = ButtonDefaults.buttonColors(containerColor = DeepRoyalBlue, contentColor = CrispWhite),
                                 shape = RoundedCornerShape(8.dp),
                                 modifier = Modifier.testTag("generate_barcode_from_id_button")
                             ) {
-                                Icon(Icons.Default.AutoAwesome, contentDescription = null, modifier = Modifier.size(16.dp))
+                                Icon(Icons.Default.AutoAwesome, contentDescription = null, modifier = Modifier.size(16.dp), tint = CrispWhite)
                                 Spacer(modifier = Modifier.width(4.dp))
-                                Text("Generate", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                Text("Generate", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = CrispWhite)
                             }
                         }
                     }

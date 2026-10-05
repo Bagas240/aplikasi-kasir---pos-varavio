@@ -124,13 +124,13 @@ fun CrmScreen(
                 }
                 Button(
                     onClick = { showAddCustomerDialog = true },
-                    colors = ButtonDefaults.buttonColors(containerColor = DeepRoyalBlue),
+                    colors = ButtonDefaults.buttonColors(containerColor = DeepRoyalBlue, contentColor = CrispWhite),
                     shape = RoundedCornerShape(8.dp),
                     modifier = Modifier.testTag("crm_add_customer_button")
                 ) {
-                    Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp), tint = CrispWhite)
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text("Tambah Pelanggan", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    Text("Tambah Pelanggan", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = CrispWhite)
                 }
             }
 
@@ -304,10 +304,10 @@ fun CrmScreen(
                                 Spacer(modifier = Modifier.height(10.dp))
                                 Button(
                                     onClick = { showAddCustomerDialog = true },
-                                    colors = ButtonDefaults.buttonColors(containerColor = DeepRoyalBlue),
+                                    colors = ButtonDefaults.buttonColors(containerColor = DeepRoyalBlue, contentColor = CrispWhite),
                                     shape = RoundedCornerShape(8.dp)
                                 ) {
-                                    Text("+ Tambah Pelanggan Baru")
+                                    Text("+ Tambah Pelanggan Baru", color = CrispWhite, fontWeight = FontWeight.Bold)
                                 }
                             }
                         }
@@ -536,13 +536,13 @@ fun CrmScreen(
                                                         Toast.makeText(context, "Pelunasan piutang berhasil dicatat!", Toast.LENGTH_SHORT).show()
                                                     }
                                                 },
-                                                colors = ButtonDefaults.buttonColors(containerColor = EmeraldGreen),
+                                                colors = ButtonDefaults.buttonColors(containerColor = EmeraldGreen, contentColor = CrispWhite),
                                                 modifier = Modifier.fillMaxWidth(),
                                                 shape = RoundedCornerShape(8.dp)
                                             ) {
-                                                Icon(Icons.Default.CheckCircle, contentDescription = null, modifier = Modifier.size(16.dp))
+                                                Icon(Icons.Default.CheckCircle, contentDescription = null, tint = CrispWhite, modifier = Modifier.size(16.dp))
                                                 Spacer(modifier = Modifier.width(6.dp))
-                                                Text("Catat Pelunasan Piutang", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                                                Text("Catat Pelunasan Piutang", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = CrispWhite)
                                             }
                                         }
                                     }
@@ -597,10 +597,10 @@ fun CrmScreen(
                         showAddCustomerDialog = false
                         customerToEdit = null
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = DeepRoyalBlue),
+                    colors = ButtonDefaults.buttonColors(containerColor = DeepRoyalBlue, contentColor = CrispWhite),
                     shape = RoundedCornerShape(8.dp)
                 ) {
-                    Text(if (editing == null) "Tambah Pelanggan" else "Simpan Perubahan", fontWeight = FontWeight.Bold)
+                    Text(if (editing == null) "Tambah Pelanggan" else "Simpan Perubahan", fontWeight = FontWeight.Bold, color = CrispWhite)
                 }
             },
             dismissButton = {

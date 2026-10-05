@@ -638,13 +638,13 @@ fun AnalyticsScreen(
                                         onClick = {
                                             qrisPickerLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
                                         },
-                                        colors = ButtonDefaults.buttonColors(containerColor = EmeraldGreen),
+                                        colors = ButtonDefaults.buttonColors(containerColor = EmeraldGreen, contentColor = CrispWhite),
                                         shape = RoundedCornerShape(8.dp),
                                         modifier = Modifier.fillMaxWidth()
                                     ) {
-                                        Icon(Icons.Default.AddPhotoAlternate, contentDescription = null, modifier = Modifier.size(16.dp))
+                                        Icon(Icons.Default.AddPhotoAlternate, contentDescription = null, tint = CrispWhite, modifier = Modifier.size(16.dp))
                                         Spacer(modifier = Modifier.width(6.dp))
-                                        Text("Unggah Foto QRIS Toko", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                        Text("Unggah Foto QRIS Toko", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = CrispWhite)
                                     }
                                 }
                             }

@@ -148,7 +148,7 @@ fun ShiftReportsScreen(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Button(
                         onClick = { showExportCsvDialog = true },
-                        colors = ButtonDefaults.buttonColors(containerColor = DeepRoyalBlue),
+                        colors = ButtonDefaults.buttonColors(containerColor = DeepRoyalBlue, contentColor = CrispWhite),
                         shape = RoundedCornerShape(8.dp),
                         contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp),
                         modifier = Modifier.testTag("shift_export_csv_button")
@@ -156,10 +156,11 @@ fun ShiftReportsScreen(
                         Icon(
                             imageVector = Icons.Default.FileDownload,
                             contentDescription = null,
+                            tint = CrispWhite,
                             modifier = Modifier.size(15.dp)
                         )
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text("Ekspor CSV", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        Text("Ekspor CSV", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = CrispWhite)
                     }
                     Spacer(modifier = Modifier.width(6.dp))
                     Box(
@@ -531,12 +532,12 @@ private fun ActiveShiftContent(
                         Spacer(modifier = Modifier.height(10.dp))
                         Button(
                             onClick = onOpenShiftClick,
-                            colors = ButtonDefaults.buttonColors(containerColor = DeepRoyalBlue),
+                            colors = ButtonDefaults.buttonColors(containerColor = DeepRoyalBlue, contentColor = CrispWhite),
                             shape = RoundedCornerShape(8.dp)
                         ) {
-                            Icon(Icons.Default.LockOpen, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Icon(Icons.Default.LockOpen, contentDescription = null, modifier = Modifier.size(16.dp), tint = CrispWhite)
                             Spacer(modifier = Modifier.width(6.dp))
-                            Text("Buka Shift Baru Sekarang", fontWeight = FontWeight.Bold)
+                            Text("Buka Shift Baru Sekarang", fontWeight = FontWeight.Bold, color = CrispWhite)
                         }
                     }
                 }
@@ -674,13 +675,13 @@ private fun ShiftScheduleManagementContent(
                 )
                 Button(
                     onClick = onAddClick,
-                    colors = ButtonDefaults.buttonColors(containerColor = DeepRoyalBlue),
+                    colors = ButtonDefaults.buttonColors(containerColor = DeepRoyalBlue, contentColor = CrispWhite),
                     shape = RoundedCornerShape(8.dp),
                     contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 10.dp, vertical = 6.dp)
                 ) {
-                    Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp), tint = CrispWhite)
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text("Tambah Shift", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    Text("Tambah Shift", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = CrispWhite)
                 }
             }
         }
@@ -826,13 +827,13 @@ private fun StaffUserManagementContent(
 
                     Button(
                         onClick = onAddUserClick,
-                        colors = ButtonDefaults.buttonColors(containerColor = DeepRoyalBlue),
+                        colors = ButtonDefaults.buttonColors(containerColor = DeepRoyalBlue, contentColor = CrispWhite),
                         shape = RoundedCornerShape(8.dp),
                         contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 10.dp, vertical = 6.dp)
                     ) {
-                        Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp), tint = CrispWhite)
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text("Tambah User", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        Text("Tambah User", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = CrispWhite)
                     }
                 }
             }

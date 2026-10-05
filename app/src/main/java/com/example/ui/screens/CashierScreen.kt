@@ -100,6 +100,7 @@ import com.example.ui.theme.DarkSlate
 import com.example.ui.theme.DeepRoyalBlue
 import com.example.ui.theme.EmeraldDark
 import com.example.ui.theme.EmeraldGreen
+import com.example.ui.theme.SlateMuted
 import com.example.ui.theme.SoftGrayBg
 import com.example.ui.theme.VibrantBlue
 import com.example.util.BarcodeGenerator
@@ -187,7 +188,7 @@ fun CashierScreen(
                     // Live CameraView Scanner Collapsible Drawer
                     AnimatedVisibility(visible = isScannerActive) {
                         CameraView(
-                            onBarcodeScanned = { barcode -> viewModel.onScanBarcode(barcode) },
+                            onBarcodeScanned = {},
                             lastScannedCode = lastScannedBarcode,
                             onClose = { viewModel.toggleScanner(false) },
                             sampleCodes = products.take(5).map { it.barcode },
@@ -230,16 +231,17 @@ fun CashierScreen(
                         Button(
                             onClick = { viewModel.toggleScanner(!isScannerActive) },
                             colors = ButtonDefaults.buttonColors(
-                                containerColor = if (isScannerActive) EmeraldGreen else DeepRoyalBlue
+                                containerColor = if (isScannerActive) EmeraldGreen else DeepRoyalBlue,
+                                contentColor = CrispWhite
                             ),
                             shape = RoundedCornerShape(10.dp),
                             modifier = Modifier
                                 .height(50.dp)
                                 .testTag("scanner_toggle_button")
                         ) {
-                            Icon(Icons.Default.QrCodeScanner, contentDescription = "Scanner", modifier = Modifier.size(18.dp))
+                            Icon(Icons.Default.QrCodeScanner, contentDescription = "Scanner", modifier = Modifier.size(18.dp), tint = CrispWhite)
                             Spacer(modifier = Modifier.width(4.dp))
-                            Text(if (isScannerActive) "Tutup" else "Scan", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                            Text(if (isScannerActive) "Tutup" else "Scan", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = CrispWhite)
                         }
 
                         // Draft / Hold Orders badge button
@@ -437,7 +439,7 @@ fun CashierScreen(
                 // Live CameraView Scanner Collapsible Drawer
                 AnimatedVisibility(visible = isScannerActive) {
                     CameraView(
-                        onBarcodeScanned = { barcode -> viewModel.onScanBarcode(barcode) },
+                        onBarcodeScanned = {},
                         lastScannedCode = lastScannedBarcode,
                         onClose = { viewModel.toggleScanner(false) },
                         sampleCodes = products.take(5).map { it.barcode },
@@ -480,16 +482,17 @@ fun CashierScreen(
                     Button(
                         onClick = { viewModel.toggleScanner(!isScannerActive) },
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = if (isScannerActive) EmeraldGreen else DeepRoyalBlue
+                            containerColor = if (isScannerActive) EmeraldGreen else DeepRoyalBlue,
+                            contentColor = CrispWhite
                         ),
                         shape = RoundedCornerShape(10.dp),
                         modifier = Modifier
                             .height(52.dp)
                             .testTag("scanner_toggle_button")
                     ) {
-                        Icon(Icons.Default.QrCodeScanner, contentDescription = "Scanner", modifier = Modifier.size(20.dp))
+                        Icon(Icons.Default.QrCodeScanner, contentDescription = "Scanner", modifier = Modifier.size(20.dp), tint = CrispWhite)
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text(if (isScannerActive) "Tutup" else "Scan", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                        Text(if (isScannerActive) "Tutup" else "Scan", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = CrispWhite)
                     }
 
                     // Draft / Hold Orders badge button
@@ -726,15 +729,15 @@ fun CashierScreen(
 
                                 Button(
                                     onClick = { showCheckoutDialog = true },
-                                    colors = ButtonDefaults.buttonColors(containerColor = EmeraldGreen),
+                                    colors = ButtonDefaults.buttonColors(containerColor = EmeraldGreen, contentColor = CrispWhite),
                                     shape = RoundedCornerShape(8.dp),
                                     modifier = Modifier
                                         .height(46.dp)
                                         .testTag("pay_checkout_button")
                                 ) {
-                                    Icon(Icons.Default.Payment, contentDescription = null, modifier = Modifier.size(18.dp))
+                                    Icon(Icons.Default.Payment, contentDescription = null, modifier = Modifier.size(18.dp), tint = CrispWhite)
                                     Spacer(modifier = Modifier.width(6.dp))
-                                    Text("Bayar", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                                    Text("Bayar", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = CrispWhite)
                                 }
                             }
                         }
@@ -869,13 +872,13 @@ fun CashierScreen(
                         showCartSheet = false
                         showCheckoutDialog = true
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = EmeraldGreen),
+                    colors = ButtonDefaults.buttonColors(containerColor = EmeraldGreen, contentColor = CrispWhite),
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(50.dp),
                     shape = RoundedCornerShape(10.dp)
                 ) {
-                    Text("Lanjut ke Pembayaran (${CurrencyFormatter.formatRupiah(viewModel.cartGrandTotal)})", fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                    Text("Lanjut ke Pembayaran (${CurrencyFormatter.formatRupiah(viewModel.cartGrandTotal)})", fontWeight = FontWeight.Bold, fontSize = 15.sp, color = CrispWhite)
                 }
                 Spacer(modifier = Modifier.height(16.dp))
             }
@@ -939,10 +942,10 @@ fun CashierScreen(
                                             viewModel.restoreDraft(draft)
                                             showDraftDialog = false
                                         },
-                                        colors = ButtonDefaults.buttonColors(containerColor = DeepRoyalBlue),
+                                        colors = ButtonDefaults.buttonColors(containerColor = DeepRoyalBlue, contentColor = CrispWhite),
                                         shape = RoundedCornerShape(6.dp)
                                     ) {
-                                        Text("Buka", fontSize = 11.sp)
+                                        Text("Buka", fontSize = 11.sp, color = CrispWhite, fontWeight = FontWeight.Bold)
                                     }
                                 }
                             }
@@ -965,9 +968,9 @@ fun CashierScreen(
                         showHoldPrompt = false
                         showCartSheet = false
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD97706))
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD97706), contentColor = CrispWhite)
                 ) {
-                    Text("Hold Pesanan")
+                    Text("Hold Pesanan", color = CrispWhite, fontWeight = FontWeight.Bold)
                 }
             },
             dismissButton = {
@@ -1078,9 +1081,9 @@ fun CashierScreen(
                         viewModel.updateItemNote(item, noteInput.trim())
                         itemToEdit = null
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = DeepRoyalBlue)
+                    colors = ButtonDefaults.buttonColors(containerColor = DeepRoyalBlue, contentColor = CrispWhite)
                 ) {
-                    Text("Simpan Perubahan")
+                    Text("Simpan Perubahan", color = CrispWhite, fontWeight = FontWeight.Bold)
                 }
             },
             dismissButton = {
@@ -1364,19 +1367,30 @@ fun CartSidebarView(
             Button(
                 onClick = onProceedPayment,
                 enabled = cartItems.isNotEmpty(),
-                colors = ButtonDefaults.buttonColors(containerColor = EmeraldGreen),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = EmeraldGreen,
+                    contentColor = CrispWhite,
+                    disabledContainerColor = Color(0xFFE2E8F0),
+                    disabledContentColor = SlateMuted
+                ),
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(48.dp)
                     .testTag("pay_checkout_button_sidebar"),
                 shape = RoundedCornerShape(8.dp)
             ) {
-                Icon(Icons.Default.Payment, contentDescription = null, modifier = Modifier.size(18.dp))
+                Icon(
+                    Icons.Default.Payment,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp),
+                    tint = if (cartItems.isNotEmpty()) CrispWhite else SlateMuted
+                )
                 Spacer(modifier = Modifier.width(6.dp))
                 Text(
                     text = if (cartItems.isEmpty()) "Keranjang Kosong" else "Bayar ${CurrencyFormatter.formatRupiah(viewModel.cartGrandTotal)}",
                     fontWeight = FontWeight.Bold,
-                    fontSize = 13.sp
+                    fontSize = 13.sp,
+                    color = if (cartItems.isNotEmpty()) CrispWhite else SlateMuted
                 )
             }
         }

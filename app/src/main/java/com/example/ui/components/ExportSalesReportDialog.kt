@@ -573,12 +573,12 @@ fun ExportSalesReportDialog(
                             .fillMaxWidth()
                             .height(48.dp)
                             .testTag("export_share_button"),
-                        colors = ButtonDefaults.buttonColors(containerColor = DeepRoyalBlue),
+                        colors = ButtonDefaults.buttonColors(containerColor = DeepRoyalBlue, contentColor = CrispWhite),
                         shape = RoundedCornerShape(10.dp)
                     ) {
-                        Icon(Icons.Default.Share, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Icon(Icons.Default.Share, contentDescription = null, tint = CrispWhite, modifier = Modifier.size(18.dp))
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("Kirim / Bagikan File CSV", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                        Text("Kirim / Bagikan File CSV", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = CrispWhite)
                     }
 
                     // 2. Save to Device Storage (Downloads / Documents via SAF)

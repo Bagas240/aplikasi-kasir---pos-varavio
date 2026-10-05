@@ -429,9 +429,20 @@ class PosViewModel(application: Application) : AndroidViewModel(application) {
 
     fun clearScanFeedback() { _scanFeedback.value = null }
 
+    private var lastScannedDebounceCode: String = ""
+    private var lastScannedDebounceTime: Long = 0L
+
     fun onScanBarcode(barcode: String, formatName: String = "Barcode") {
         val trimmed = barcode.trim()
         if (trimmed.isBlank()) return
+        val now = System.currentTimeMillis()
+        // Prevent duplicate trigger within 1.5 second cooldown for the same code
+        if (trimmed == lastScannedDebounceCode && now - lastScannedDebounceTime < 1500L) {
+            return
+        }
+        lastScannedDebounceCode = trimmed
+        lastScannedDebounceTime = now
+
         _lastScannedBarcode.value = trimmed
         SoundHelper.playBeep()
         SoundHelper.vibrate(getApplication())
@@ -454,6 +465,14 @@ class PosViewModel(application: Application) : AndroidViewModel(application) {
     fun onScanBarcodeResult(result: BarcodeScanResult) {
         val trimmed = result.rawCode.trim()
         if (trimmed.isBlank()) return
+        val now = System.currentTimeMillis()
+        // Prevent duplicate trigger within 1.5 second cooldown for the same code
+        if (trimmed == lastScannedDebounceCode && now - lastScannedDebounceTime < 1500L) {
+            return
+        }
+        lastScannedDebounceCode = trimmed
+        lastScannedDebounceTime = now
+
         _lastScannedBarcode.value = trimmed
         SoundHelper.playBeep()
         SoundHelper.vibrate(getApplication())

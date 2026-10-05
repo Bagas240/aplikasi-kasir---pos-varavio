@@ -389,16 +389,19 @@ fun CameraView(
                                                             mappedProduct = matched
                                                             showCapturedBadge = true
                                                             val formatName = BarcodeItemMatcher.getBarcodeFormatName(barcode.format)
-                                                            onBarcodeResult?.invoke(
-                                                                BarcodeScanResult(
-                                                                    rawCode = rawValue,
-                                                                    format = barcode.format,
-                                                                    formatName = formatName,
-                                                                    matchedProduct = matched,
-                                                                    timestamp = now
+                                                            if (onBarcodeResult != null) {
+                                                                onBarcodeResult.invoke(
+                                                                    BarcodeScanResult(
+                                                                        rawCode = rawValue,
+                                                                        format = barcode.format,
+                                                                        formatName = formatName,
+                                                                        matchedProduct = matched,
+                                                                        timestamp = now
+                                                                    )
                                                                 )
-                                                            )
-                                                            onBarcodeScanned(rawValue)
+                                                            } else {
+                                                                onBarcodeScanned(rawValue)
+                                                            }
                                                         }
                                                     }
                                                 }
@@ -466,7 +469,7 @@ fun CameraView(
                         Spacer(modifier = Modifier.height(8.dp))
                         Button(
                             onClick = { permissionLauncher.launch(Manifest.permission.CAMERA) },
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2563EB)),
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2563EB), contentColor = Color.White),
                             shape = RoundedCornerShape(8.dp),
                             modifier = Modifier.testTag("grant_camera_permission_button")
                         ) {
@@ -634,8 +637,11 @@ fun CameraView(
                                         val matched = if (products.isNotEmpty()) BarcodeItemMatcher.matchProduct(code, products) else null
                                         mappedProduct = matched
                                         showCapturedBadge = true
-                                        onBarcodeResult?.invoke(BarcodeScanResult(code, matchedProduct = matched))
-                                        onBarcodeScanned(code)
+                                        if (onBarcodeResult != null) {
+                                            onBarcodeResult.invoke(BarcodeScanResult(code, matchedProduct = matched))
+                                        } else {
+                                            onBarcodeScanned(code)
+                                        }
                                         manualInputCode = ""
                                     }
                                 }
@@ -662,12 +668,15 @@ fun CameraView(
                                     val matched = if (products.isNotEmpty()) BarcodeItemMatcher.matchProduct(code, products) else null
                                     mappedProduct = matched
                                     showCapturedBadge = true
-                                    onBarcodeResult?.invoke(BarcodeScanResult(code, matchedProduct = matched))
-                                    onBarcodeScanned(code)
+                                    if (onBarcodeResult != null) {
+                                        onBarcodeResult.invoke(BarcodeScanResult(code, matchedProduct = matched))
+                                    } else {
+                                        onBarcodeScanned(code)
+                                    }
                                     manualInputCode = ""
                                 }
                             },
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2563EB)),
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2563EB), contentColor = Color.White),
                             shape = RoundedCornerShape(8.dp),
                             modifier = Modifier
                                 .height(48.dp)
@@ -698,8 +707,11 @@ fun CameraView(
                                 val matched = if (products.isNotEmpty()) BarcodeItemMatcher.matchProduct(code, products) else null
                                 mappedProduct = matched
                                 showCapturedBadge = true
-                                onBarcodeResult?.invoke(BarcodeScanResult(code, matchedProduct = matched))
-                                onBarcodeScanned(code)
+                                if (onBarcodeResult != null) {
+                                    onBarcodeResult.invoke(BarcodeScanResult(code, matchedProduct = matched))
+                                } else {
+                                    onBarcodeScanned(code)
+                                }
                             },
                             shape = RoundedCornerShape(6.dp),
                             color = Color(0xFF1E293B),

@@ -369,7 +369,7 @@ fun GuidedOnboardingScreen(
                 if (currentStepIndex < steps.size - 1) {
                     Button(
                         onClick = { currentStepIndex++ },
-                        colors = ButtonDefaults.buttonColors(containerColor = DeepRoyalBlue),
+                        colors = ButtonDefaults.buttonColors(containerColor = DeepRoyalBlue, contentColor = CrispWhite),
                         shape = RoundedCornerShape(10.dp),
                         modifier = Modifier
                             .height(48.dp)
@@ -377,12 +377,12 @@ fun GuidedOnboardingScreen(
                     ) {
                         Text("Langkah Berikutnya", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = CrispWhite)
                         Spacer(modifier = Modifier.width(6.dp))
-                        Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null, tint = CrispWhite, modifier = Modifier.size(16.dp))
                     }
                 } else {
                     Button(
                         onClick = { onCompleteTutorial(PosTab.CASHIER) },
-                        colors = ButtonDefaults.buttonColors(containerColor = EmeraldGreen),
+                        colors = ButtonDefaults.buttonColors(containerColor = EmeraldGreen, contentColor = CrispWhite),
                         shape = RoundedCornerShape(10.dp),
                         modifier = Modifier
                             .height(48.dp)
@@ -390,7 +390,7 @@ fun GuidedOnboardingScreen(
                     ) {
                         Text("Mulai Berjualan Sekarang!", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = CrispWhite)
                         Spacer(modifier = Modifier.width(6.dp))
-                        Icon(Icons.Default.PointOfSale, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Icon(Icons.Default.PointOfSale, contentDescription = null, tint = CrispWhite, modifier = Modifier.size(16.dp))
                     }
                 }
             }

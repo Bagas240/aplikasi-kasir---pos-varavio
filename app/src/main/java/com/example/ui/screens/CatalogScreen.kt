@@ -117,12 +117,12 @@ fun CatalogScreen(
                 }
                 Button(
                     onClick = { showAddDialog = true },
-                    colors = ButtonDefaults.buttonColors(containerColor = DeepRoyalBlue),
+                    colors = ButtonDefaults.buttonColors(containerColor = DeepRoyalBlue, contentColor = CrispWhite),
                     shape = RoundedCornerShape(8.dp)
                 ) {
-                    Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp), tint = CrispWhite)
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text("Tambah", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                    Text("Tambah", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = CrispWhite)
                 }
             }
 
@@ -314,9 +314,9 @@ fun CatalogScreen(
                         productToEdit = null
                     },
                     enabled = name.isNotBlank() && sellP > 0,
-                    colors = ButtonDefaults.buttonColors(containerColor = DeepRoyalBlue)
+                    colors = ButtonDefaults.buttonColors(containerColor = DeepRoyalBlue, contentColor = CrispWhite)
                 ) {
-                    Text(if (editing == null) "Tambah Produk" else "Simpan Perubahan")
+                    Text(if (editing == null) "Tambah Produk" else "Simpan Perubahan", color = CrispWhite, fontWeight = FontWeight.Bold)
                 }
             },
             dismissButton = {
