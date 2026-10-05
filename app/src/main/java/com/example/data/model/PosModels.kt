@@ -126,8 +126,7 @@ enum class PaymentMethod(val label: String) {
     CREDIT_CARD("Credit Card"),
     E_WALLET("E-Wallet"),
     BANK_TRANSFER("Bank Transfer"),
-    SPLIT("Split Payment"),
-    DEBT("Customer Tab (Piutang)")
+    SPLIT("Split Payment")
 }
 
 enum class OrderStatus {
@@ -174,36 +173,6 @@ data class OrderEntity(
     val shiftId: Long = 0L,
     val shiftName: String = "",
     val cashierRole: String = "Kasir"
-)
-
-@Immutable
-@Entity(tableName = "customers")
-data class Customer(
-    @PrimaryKey(autoGenerate = true)
-    val id: Long = 0,
-    val name: String,
-    val phone: String,
-    val email: String = "",
-    val address: String = "",
-    val points: Int = 0,
-    val debtBalance: Double = 0.0,
-    val totalSpend: Double = 0.0,
-    val updatedAt: Long = System.currentTimeMillis()
-)
-
-@Immutable
-@Entity(tableName = "customer_debts")
-data class CustomerDebt(
-    @PrimaryKey(autoGenerate = true)
-    val id: Long = 0,
-    val customerId: Long,
-    val customerName: String,
-    val orderId: String,
-    val amount: Double,
-    val dueDate: Long,
-    val status: String = "UNPAID", // UNPAID, PAID
-    val notes: String = "",
-    val createdAt: Long = System.currentTimeMillis()
 )
 
 @Immutable

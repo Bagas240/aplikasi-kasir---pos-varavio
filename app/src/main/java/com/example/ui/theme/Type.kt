@@ -6,7 +6,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 
-// Set of Material typography styles with crisp, high-contrast dark text
+// Material 3 Typography styles with dynamic contentColor inheritance
 val Typography =
   Typography(
     bodyLarge =
@@ -15,71 +15,62 @@ val Typography =
         fontWeight = FontWeight.Normal,
         fontSize = 16.sp,
         lineHeight = 24.sp,
-        letterSpacing = 0.5.sp,
-        color = DarkSlate
+        letterSpacing = 0.5.sp
       ),
     bodyMedium =
       TextStyle(
         fontFamily = FontFamily.Default,
         fontWeight = FontWeight.Normal,
         fontSize = 14.sp,
-        lineHeight = 20.sp,
-        color = DarkSlate
+        lineHeight = 20.sp
       ),
     bodySmall =
       TextStyle(
         fontFamily = FontFamily.Default,
         fontWeight = FontWeight.Normal,
         fontSize = 12.sp,
-        lineHeight = 16.sp,
-        color = DarkSlate
+        lineHeight = 16.sp
       ),
     titleLarge =
       TextStyle(
         fontFamily = FontFamily.Default,
         fontWeight = FontWeight.Bold,
         fontSize = 20.sp,
-        lineHeight = 26.sp,
-        color = DarkSlate
+        lineHeight = 26.sp
       ),
     titleMedium =
       TextStyle(
         fontFamily = FontFamily.Default,
         fontWeight = FontWeight.SemiBold,
         fontSize = 16.sp,
-        lineHeight = 22.sp,
-        color = DarkSlate
+        lineHeight = 22.sp
       ),
     titleSmall =
       TextStyle(
         fontFamily = FontFamily.Default,
         fontWeight = FontWeight.Medium,
         fontSize = 14.sp,
-        lineHeight = 18.sp,
-        color = DarkSlate
+        lineHeight = 18.sp
       ),
     labelLarge =
       TextStyle(
         fontFamily = FontFamily.Default,
         fontWeight = FontWeight.SemiBold,
         fontSize = 13.sp,
-        lineHeight = 16.sp,
-        color = DarkSlate
+        lineHeight = 16.sp
       ),
     labelMedium =
       TextStyle(
         fontFamily = FontFamily.Default,
         fontWeight = FontWeight.Medium,
         fontSize = 11.sp,
-        lineHeight = 14.sp,
-        color = DarkSlate
+        lineHeight = 14.sp
       ),
     labelSmall =
       TextStyle(
         fontFamily = FontFamily.Default,
         fontWeight = FontWeight.Medium,
         fontSize = 10.sp,
-        lineHeight = 12.sp,
-        color = DarkSlate
+        lineHeight = 12.sp
       )
   )

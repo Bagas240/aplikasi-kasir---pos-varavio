@@ -3,8 +3,6 @@ package com.example.data.repository
 import com.example.data.cache.ProductDataCache
 import com.example.data.local.PosDao
 import com.example.data.model.CartItem
-import com.example.data.model.Customer
-import com.example.data.model.CustomerDebt
 import com.example.data.model.OrderEntity
 import com.example.data.model.OrderStatus
 import com.example.data.model.PaymentMethod
@@ -32,8 +30,6 @@ class PosRepository(
     val allProducts: Flow<List<Product>> = posDao.getAllProducts()
     val completedOrders: Flow<List<OrderEntity>> = posDao.getCompletedOrders()
     val draftOrders: Flow<List<OrderEntity>> = posDao.getDraftOrders()
-    val allCustomers: Flow<List<Customer>> = posDao.getAllCustomers()
-    val allDebts: Flow<List<CustomerDebt>> = posDao.getAllDebts()
     val allAdjustments: Flow<List<StockAdjustment>> = posDao.getAllAdjustments()
     val allPurchaseOrders: Flow<List<PurchaseOrder>> = posDao.getAllPurchaseOrders()
     val allShifts: Flow<List<Shift>> = posDao.getAllShifts()
@@ -128,9 +124,7 @@ class PosRepository(
 
     suspend fun checkoutOrder(
         order: OrderEntity,
-        cartItems: List<CartItem>,
-        customer: Customer? = null,
-        redeemedPoints: Int = 0
+        cartItems: List<CartItem>
     ) {
         val currentShift = posDao.getCurrentOpenShift()
         val shiftTitle = currentShift?.let { "${it.shiftScheduleName} (${it.shiftScheduleTime})" } ?: ""
@@ -152,39 +146,7 @@ class PosRepository(
             }
         }
 
-        // 3. Update Customer Points & Lifetime spend
-        if (customer != null) {
-            val earnedPoints = (finalOrder.grandTotal / 1000.0).toInt()
-            val updatedPoints = (customer.points - redeemedPoints + earnedPoints).coerceAtLeast(0)
-            val updatedSpend = customer.totalSpend + finalOrder.grandTotal
-            val updatedDebt = if (finalOrder.paymentMethod == PaymentMethod.DEBT.name) {
-                customer.debtBalance + finalOrder.grandTotal
-            } else customer.debtBalance
-
-            posDao.updateCustomer(
-                customer.copy(
-                    points = updatedPoints,
-                    totalSpend = updatedSpend,
-                    debtBalance = updatedDebt,
-                    updatedAt = System.currentTimeMillis()
-                )
-            )
-
-            if (finalOrder.paymentMethod == PaymentMethod.DEBT.name) {
-                posDao.insertDebt(
-                    CustomerDebt(
-                        customerId = customer.id,
-                        customerName = customer.name,
-                        orderId = finalOrder.orderId,
-                        amount = finalOrder.grandTotal,
-                        dueDate = System.currentTimeMillis() + (7L * 24 * 3600 * 1000), // 7 days
-                        notes = "Belanja POS #${finalOrder.orderId}"
-                    )
-                )
-            }
-        }
-
-        // 4. Update active shift cash/digital sales
+        // 3. Update active shift cash/digital sales
         if (currentShift != null) {
             var newCashSales = currentShift.cashSales
             var newDigitalSales = currentShift.digitalSales
@@ -197,7 +159,7 @@ class PosRepository(
                 newCashSales += finalOrder.splitAmount1
                 newExpectedCash += finalOrder.splitAmount1
                 newDigitalSales += finalOrder.splitAmount2
-            } else if (finalOrder.paymentMethod != PaymentMethod.DEBT.name) {
+            } else {
                 newDigitalSales += finalOrder.grandTotal
             }
 
@@ -210,7 +172,7 @@ class PosRepository(
             )
         }
 
-        // 5. Create Transaction Log for Recent Sales and audit trail
+        // 4. Create Transaction Log for Recent Sales and audit trail
         val itemsSummary = cartItems.joinToString(", ") { "${it.displayName} x${it.quantity}" }
         val totalItems = cartItems.sumOf { it.quantity }
         transactionLogRepository.logOrder(
@@ -254,16 +216,6 @@ class PosRepository(
                 staffName = staffName
             )
         )
-    }
-
-    suspend fun insertCustomer(customer: Customer) = posDao.insertCustomer(customer)
-    suspend fun updateCustomer(customer: Customer) = posDao.updateCustomer(customer)
-    suspend fun deleteCustomer(customer: Customer) = posDao.deleteCustomer(customer)
-
-    suspend fun payCustomerDebt(debt: CustomerDebt, customer: Customer) {
-        posDao.updateDebt(debt.copy(status = "PAID"))
-        val remainingDebt = (customer.debtBalance - debt.amount).coerceAtLeast(0.0)
-        posDao.updateCustomer(customer.copy(debtBalance = remainingDebt))
     }
 
     suspend fun insertPurchaseOrder(po: PurchaseOrder) = posDao.insertPurchaseOrder(po)

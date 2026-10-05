@@ -6,8 +6,6 @@ import androidx.lifecycle.viewModelScope
 import com.example.data.local.AppDatabase
 import com.example.data.local.AuthPreferences
 import com.example.data.model.CartItem
-import com.example.data.model.Customer
-import com.example.data.model.CustomerDebt
 import com.example.data.model.OrderEntity
 import com.example.data.model.OrderStatus
 import com.example.data.model.PaymentMethod
@@ -39,7 +37,6 @@ enum class PosTab(val title: String) {
     BARCODE_ENGINE("Barcode & Cetak"),
     CATALOG("Katalog Produk"),
     INVENTORY("Stok & Opname"),
-    CRM("Pelanggan & Utang"),
     SHIFT("Shift Kasir"),
     ANALYTICS("Laporan & Toko")
 }
@@ -107,12 +104,6 @@ class PosViewModel(application: Application) : AndroidViewModel(application) {
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val draftOrders: StateFlow<List<OrderEntity>> = repository.draftOrders
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
-
-    val customers: StateFlow<List<Customer>> = repository.allCustomers
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
-
-    val debts: StateFlow<List<CustomerDebt>> = repository.allDebts
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val adjustments: StateFlow<List<StockAdjustment>> = repository.allAdjustments

@@ -6,8 +6,6 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Update
-import com.example.data.model.Customer
-import com.example.data.model.CustomerDebt
 import com.example.data.model.OrderEntity
 import com.example.data.model.Product
 import com.example.data.model.PurchaseOrder
@@ -75,35 +73,6 @@ interface PosDao {
 
     @Delete
     suspend fun deleteOrder(order: OrderEntity)
-
-    // CUSTOMERS
-    @Query("SELECT * FROM customers ORDER BY name ASC")
-    fun getAllCustomers(): Flow<List<Customer>>
-
-    @Query("SELECT * FROM customers WHERE id = :id")
-    suspend fun getCustomerById(id: Long): Customer?
-
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertCustomer(customer: Customer): Long
-
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertCustomers(customers: List<Customer>)
-
-    @Update
-    suspend fun updateCustomer(customer: Customer)
-
-    @Delete
-    suspend fun deleteCustomer(customer: Customer)
-
-    // DEBTS
-    @Query("SELECT * FROM customer_debts ORDER BY createdAt DESC")
-    fun getAllDebts(): Flow<List<CustomerDebt>>
-
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertDebt(debt: CustomerDebt): Long
-
-    @Update
-    suspend fun updateDebt(debt: CustomerDebt)
 
     // INVENTORY / ADJUSTMENTS
     @Query("SELECT * FROM stock_adjustments ORDER BY timestamp DESC")

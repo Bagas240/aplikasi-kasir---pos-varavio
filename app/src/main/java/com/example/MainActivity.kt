@@ -87,7 +87,6 @@ import com.example.ui.screens.AnalyticsScreen
 import com.example.ui.screens.BarcodeCenterScreen
 import com.example.ui.screens.CashierScreen
 import com.example.ui.screens.CatalogScreen
-import com.example.ui.screens.CrmScreen
 import com.example.ui.screens.InventoryScreen
 import com.example.ui.screens.ShiftReportsScreen
 import com.example.ui.screens.onboarding.AuthScreen
@@ -234,7 +233,6 @@ fun PosMasterApp(viewModel: PosViewModel = viewModel()) {
                     Triple(PosTab.BARCODE_ENGINE, "Barcode", Icons.Default.QrCode),
                     Triple(PosTab.CATALOG, "Produk", Icons.Default.ShoppingBag),
                     Triple(PosTab.INVENTORY, "Stok", Icons.Default.Inventory2),
-                    Triple(PosTab.CRM, "Pelanggan", Icons.Default.People),
                     Triple(PosTab.SHIFT, "Shift", Icons.Default.AccountBalanceWallet),
                     Triple(PosTab.ANALYTICS, "Laporan", Icons.Default.Assessment)
                 )
@@ -314,6 +312,7 @@ fun PosMasterApp(viewModel: PosViewModel = viewModel()) {
                         // Compact Enterprise Top Bar
                         Surface(
                             color = DeepRoyalBlue,
+                            contentColor = CrispWhite,
                             shadowElevation = 3.dp,
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -407,7 +406,6 @@ fun PosMasterApp(viewModel: PosViewModel = viewModel()) {
                                     PosTab.BARCODE_ENGINE -> BarcodeCenterScreen(viewModel = viewModel)
                                     PosTab.CATALOG -> CatalogScreen(viewModel = viewModel)
                                     PosTab.INVENTORY -> InventoryScreen(viewModel = viewModel)
-                                    PosTab.CRM -> CrmScreen(viewModel = viewModel)
                                     PosTab.SHIFT -> ShiftReportsScreen(viewModel = viewModel)
                                     PosTab.ANALYTICS -> AnalyticsScreen(viewModel = viewModel)
                                 }
@@ -500,7 +498,12 @@ fun PosMasterApp(viewModel: PosViewModel = viewModel()) {
                                     }
                                 }
                             },
-                            colors = TopAppBarDefaults.topAppBarColors(containerColor = DeepRoyalBlue)
+                            colors = TopAppBarDefaults.topAppBarColors(
+                                containerColor = DeepRoyalBlue,
+                                titleContentColor = CrispWhite,
+                                actionIconContentColor = CrispWhite,
+                                navigationIconContentColor = CrispWhite
+                            )
                         )
                     },
                     bottomBar = {
@@ -559,7 +562,6 @@ fun PosMasterApp(viewModel: PosViewModel = viewModel()) {
                                 PosTab.BARCODE_ENGINE -> BarcodeCenterScreen(viewModel = viewModel)
                                 PosTab.CATALOG -> CatalogScreen(viewModel = viewModel)
                                 PosTab.INVENTORY -> InventoryScreen(viewModel = viewModel)
-                                PosTab.CRM -> CrmScreen(viewModel = viewModel)
                                 PosTab.SHIFT -> ShiftReportsScreen(viewModel = viewModel)
                                 PosTab.ANALYTICS -> AnalyticsScreen(viewModel = viewModel)
                             }
