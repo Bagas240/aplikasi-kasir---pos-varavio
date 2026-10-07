@@ -79,11 +79,16 @@ object EscPosPrinterHelper {
         sb.appendLine(doubleLine())
 
         if (isOnline) {
-            // ONLINE SHOP: No physical cashier or cashier shift
+            // ONLINE SHOP: No cashier name, no walk-in customer
             sb.appendLine(twoCols("No. Pesanan :", order.orderId))
             sb.appendLine(twoCols("Waktu Order :", CurrencyFormatter.formatDate(order.timestamp)))
-            sb.appendLine(twoCols("Admin Olshop:", order.cashierName.ifBlank { "Admin Toko" }))
-            sb.appendLine(twoCols("Penerima    :", order.customerName))
+            // No cashier name printed on online receipt!
+            val onlineRecipient = if (order.customerName.isBlank() || order.customerName.contains("Walk-In", ignoreCase = true)) {
+                "Pelanggan Online"
+            } else {
+                order.customerName
+            }
+            sb.appendLine(twoCols("Penerima    :", onlineRecipient))
             if (order.customerPhone.isNotBlank()) {
                 sb.appendLine(twoCols("No. WA/Telp :", order.customerPhone))
             }
@@ -153,10 +158,10 @@ object EscPosPrinterHelper {
 
         sb.appendLine(line())
 
-        // Custom Personalized Message for Customer
+        // Custom Personalized Message for Customer (user can type custom message)
         val effectiveNote = if (customReceiptNote.isNotBlank()) customReceiptNote else order.orderNote
         if (effectiveNote.isNotBlank()) {
-            val messageHeader = if (isOnline) "💌 PESAN HANGAT UNTUK PEMBELI 💌" else "💌 PESAN UNTUK PELANGGAN 💌"
+            val messageHeader = if (isOnline) "💌 PESAN DARI TOKO 💌" else "💌 PESAN UNTUK PELANGGAN 💌"
             sb.appendLine(center(messageHeader))
             effectiveNote.lines().forEach { noteLine ->
                 val trimmed = noteLine.trim()
@@ -169,10 +174,20 @@ object EscPosPrinterHelper {
             sb.appendLine(line())
         }
 
+        // Teks Tebal Bold Besar Semua untuk Bisnis Online:
+        if (isOnline) {
+            val refundNotice = "!!PERHATIAN JANGAN SAMPAI HILANG STRUK INI DAN SERTAKAN VIDEO UNBOXING KETIKA INGIN REFUND!!"
+            sb.appendLine(doubleLine())
+            wrapText(refundNotice).forEach { noticeLine ->
+                sb.appendLine(center(noticeLine))
+            }
+            sb.appendLine(doubleLine())
+        }
+
         val effectiveFooter = if (store.receiptFooter.isNotBlank()) {
             store.receiptFooter
         } else if (isOnline) {
-            "Terima kasih telah berbelanja online!\nMohon video unboxing saat buka paket ya kak 🙏"
+            "Terima kasih telah berbelanja online!\nKepuasan Anda adalah prioritas kami 🙏"
         } else {
             "Terima kasih atas kunjungan Anda!\nBarang yang sudah dibeli tidak dapat ditukar."
         }

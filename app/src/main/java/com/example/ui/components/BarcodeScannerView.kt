@@ -135,6 +135,7 @@ fun BarcodeScannerView(
     var isSuccessHighlight by remember { mutableStateOf(false) }
 
     var cameraControlRef by remember { mutableStateOf<CameraControl?>(null) }
+    var cameraProviderRef by remember { mutableStateOf<ProcessCameraProvider?>(null) }
 
     // Executor for ML Kit image analysis
     val cameraExecutor = remember { Executors.newSingleThreadExecutor() }
@@ -147,6 +148,9 @@ fun BarcodeScannerView(
 
     DisposableEffect(Unit) {
         onDispose {
+            try {
+                cameraProviderRef?.unbindAll()
+            } catch (_: Exception) {}
             try {
                 barcodeScanner.close()
             } catch (_: Exception) {}
@@ -296,6 +300,7 @@ fun BarcodeScannerView(
                             cameraProviderFuture.addListener({
                                 try {
                                     val cameraProvider = cameraProviderFuture.get()
+                                    cameraProviderRef = cameraProvider
 
                                     // Preview Use Case with low-end optimized resolution (720p)
                                     val preview = Preview.Builder()

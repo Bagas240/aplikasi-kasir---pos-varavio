@@ -110,6 +110,7 @@ class ProductDataCache(
         queryCache.evictAll()
     }
 
+    @Suppress("DEPRECATION")
     fun onTrimMemory(level: Int) = synchronized(lock) {
         when {
             level >= ComponentCallbacks2.TRIM_MEMORY_RUNNING_CRITICAL -> {

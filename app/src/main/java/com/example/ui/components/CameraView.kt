@@ -183,8 +183,13 @@ fun CameraView(
     }
 
     val cameraExecutor = remember { Executors.newSingleThreadExecutor() }
+    var cameraProviderRef by remember { mutableStateOf<ProcessCameraProvider?>(null) }
+
     DisposableEffect(Unit) {
         onDispose {
+            try {
+                cameraProviderRef?.unbindAll()
+            } catch (_: Exception) {}
             try {
                 barcodeScanner.close()
             } catch (_: Exception) {}
@@ -343,6 +348,7 @@ fun CameraView(
                             cameraProviderFuture.addListener({
                                 try {
                                     val cameraProvider = cameraProviderFuture.get()
+                                    cameraProviderRef = cameraProvider
 
                                     // Preview use case with low-end optimized resolution (720p)
                                     val preview = Preview.Builder()

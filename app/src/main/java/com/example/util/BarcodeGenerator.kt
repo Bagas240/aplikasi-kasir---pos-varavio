@@ -228,14 +228,21 @@ object BarcodeGenerator {
      * Converts a 1D barcode boolean array to an Android Bitmap
      */
     fun createBarcodeBitmap(modules: BooleanArray, width: Int = 400, height: Int = 120): Bitmap {
-        val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
-        val moduleWidth = width.toFloat() / modules.size
+        val safeW = width.coerceAtLeast(1)
+        val safeH = height.coerceAtLeast(1)
+        if (modules.isEmpty()) {
+            val emptyBitmap = Bitmap.createBitmap(safeW, safeH, Bitmap.Config.ARGB_8888)
+            emptyBitmap.eraseColor(Color.WHITE)
+            return emptyBitmap
+        }
+        val bitmap = Bitmap.createBitmap(safeW, safeH, Bitmap.Config.ARGB_8888)
+        val moduleWidth = safeW.toFloat() / modules.size
 
-        for (x in 0 until width) {
+        for (x in 0 until safeW) {
             val moduleIdx = (x / moduleWidth).toInt().coerceIn(0, modules.size - 1)
             val isBlack = modules[moduleIdx]
             val color = if (isBlack) Color.BLACK else Color.WHITE
-            for (y in 0 until height) {
+            for (y in 0 until safeH) {
                 bitmap.setPixel(x, y, color)
             }
         }
@@ -246,13 +253,19 @@ object BarcodeGenerator {
      * Converts a 2D QR matrix to an Android Bitmap
      */
     fun createQrBitmap(matrix: Array<BooleanArray>, sizePx: Int = 300): Bitmap {
-        val bitmap = Bitmap.createBitmap(sizePx, sizePx, Bitmap.Config.ARGB_8888)
+        val safeSize = sizePx.coerceAtLeast(1)
+        if (matrix.isEmpty() || matrix[0].isEmpty()) {
+            val emptyBitmap = Bitmap.createBitmap(safeSize, safeSize, Bitmap.Config.ARGB_8888)
+            emptyBitmap.eraseColor(Color.WHITE)
+            return emptyBitmap
+        }
+        val bitmap = Bitmap.createBitmap(safeSize, safeSize, Bitmap.Config.ARGB_8888)
         val matrixSize = matrix.size
-        val cellSize = sizePx.toFloat() / matrixSize
+        val cellSize = safeSize.toFloat() / matrixSize
 
-        for (y in 0 until sizePx) {
+        for (y in 0 until safeSize) {
             val r = (y / cellSize).toInt().coerceIn(0, matrixSize - 1)
-            for (x in 0 until sizePx) {
+            for (x in 0 until safeSize) {
                 val c = (x / cellSize).toInt().coerceIn(0, matrixSize - 1)
                 val isBlack = matrix[r][c]
                 bitmap.setPixel(x, y, if (isBlack) Color.BLACK else Color.WHITE)
@@ -271,6 +284,7 @@ object BarcodeGenerator {
         canvasHeight: Float,
         barColor: androidx.compose.ui.graphics.Color = androidx.compose.ui.graphics.Color.Black
     ) {
+        if (modules.isEmpty() || canvasWidth <= 0f || canvasHeight <= 0f) return
         val moduleWidth = canvasWidth / modules.size
         for (i in modules.indices) {
             if (modules[i]) {
@@ -293,6 +307,7 @@ object BarcodeGenerator {
         canvasHeight: Float,
         moduleColor: androidx.compose.ui.graphics.Color = androidx.compose.ui.graphics.Color.Black
     ) {
+        if (matrix.isEmpty() || matrix[0].isEmpty() || canvasWidth <= 0f || canvasHeight <= 0f) return
         val cellSize = minOf(canvasWidth, canvasHeight) / matrix.size
         val offsetX = (canvasWidth - (cellSize * matrix.size)) / 2f
         val offsetY = (canvasHeight - (cellSize * matrix.size)) / 2f

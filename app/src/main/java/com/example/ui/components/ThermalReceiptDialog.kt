@@ -26,6 +26,7 @@ import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FileDownload
 import androidx.compose.material.icons.filled.Print
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.Warning
 import com.example.util.PosPrinterManager
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -63,6 +64,8 @@ import com.example.data.model.CartItem
 import com.example.data.model.OrderEntity
 import com.example.data.model.StoreProfile
 import com.example.ui.theme.CrispWhite
+import com.example.ui.theme.DangerLight
+import com.example.ui.theme.DangerRed
 import com.example.ui.theme.DarkSlate
 import com.example.ui.theme.DeepRoyalBlue
 import com.example.ui.theme.EmeraldGreen
@@ -165,7 +168,8 @@ fun ThermalReceiptDialog(
                             )
                             Text(
                                 text = if (isOnline) {
-                                    "No: ${order.orderId} • Penerima: ${order.customerName}"
+                                    val safeCust = if (order.customerName.isBlank() || order.customerName.contains("Walk-In", ignoreCase = true)) "Pelanggan Online" else order.customerName
+                                    "No: ${order.orderId} • Penerima: $safeCust"
                                 } else {
                                     "No: ${order.orderId} • ${order.customerName}"
                                 },
@@ -315,6 +319,38 @@ fun ThermalReceiptDialog(
                 }
 
                 Spacer(modifier = Modifier.height(12.dp))
+
+                // Prominent Refund Notice Banner for Online Store
+                if (isOnline) {
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .border(1.5.dp, DangerRed, RoundedCornerShape(10.dp)),
+                        colors = CardDefaults.cardColors(containerColor = DangerLight),
+                        shape = RoundedCornerShape(10.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Warning,
+                                contentDescription = null,
+                                tint = DangerRed,
+                                modifier = Modifier.size(24.dp)
+                            )
+                            Spacer(modifier = Modifier.width(10.dp))
+                            Text(
+                                text = "!!PERHATIAN JANGAN SAMPAI HILANG STRUK INI DAN SERTAKAN VIDEO UNBOXING KETIKA INGIN REFUND!!",
+                                fontWeight = FontWeight.Black,
+                                fontSize = 11.5.sp,
+                                color = DangerRed,
+                                lineHeight = 16.sp
+                            )
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(12.dp))
+                }
 
                 // Realistic Paper Receipt View
                 Card(

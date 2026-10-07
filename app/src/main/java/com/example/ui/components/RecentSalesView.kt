@@ -401,8 +401,9 @@ fun RecentSaleItemCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column {
+                    val cashierSubtitle = if (log.cashierRole == "Admin Online" || log.cashierName == "Admin Online") "Pesanan Online" else "Kasir: ${log.cashierName}"
                     Text(
-                        text = "${log.customerName} • Kasir: ${log.cashierName}",
+                        text = "${log.customerName} • $cashierSubtitle",
                         fontSize = 11.sp,
                         color = Color(0xFF475569),
                         fontWeight = FontWeight.Medium

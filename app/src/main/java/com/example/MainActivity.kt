@@ -4,6 +4,7 @@ import android.content.res.Configuration
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.background
@@ -154,7 +155,10 @@ fun PosMasterApp(viewModel: PosViewModel = viewModel()) {
                     address = authPreferences.storeAddress,
                     phone = authPreferences.storePhone,
                     logoUri = authPreferences.storeLogoUri,
-                    qrisImageUri = authPreferences.storeQrisImageUri
+                    qrisImageUri = authPreferences.storeQrisImageUri,
+                    businessType = authPreferences.businessType,
+                    onlineStoreLink = authPreferences.onlineStoreLink,
+                    defaultCourier = authPreferences.defaultCourier
                 )
             )
         }
@@ -230,6 +234,10 @@ fun PosMasterApp(viewModel: PosViewModel = viewModel()) {
             )
         }
         OnboardingPhase.COMPLETED -> {
+            BackHandler(enabled = currentTab != PosTab.CASHIER) {
+                viewModel.setTab(PosTab.CASHIER)
+            }
+
             val isOnline = storeProfile.businessType == BusinessType.ONLINE
             LaunchedEffect(isOnline) {
                 if (isOnline && currentTab == PosTab.SHIFT) {

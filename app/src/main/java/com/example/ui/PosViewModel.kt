@@ -138,7 +138,10 @@ class PosViewModel(application: Application) : AndroidViewModel(application) {
         run {
             val prefs = AuthPreferences(application)
             StoreProfile(
-                storeName = prefs.storeName,
+                storeName = prefs.storeName.ifBlank { "VORAVIO MART" },
+                businessType = prefs.businessType,
+                onlineStoreLink = prefs.onlineStoreLink,
+                defaultCourier = prefs.defaultCourier,
                 address = prefs.storeAddress,
                 phone = prefs.storePhone,
                 logoUri = prefs.storeLogoUri,
@@ -156,7 +159,10 @@ class PosViewModel(application: Application) : AndroidViewModel(application) {
             address = profile.address,
             phone = profile.phone,
             logoUri = profile.logoUri,
-            qrisUri = profile.qrisImageUri
+            qrisUri = profile.qrisImageUri,
+            type = profile.businessType,
+            onlineLink = profile.onlineStoreLink,
+            courier = profile.defaultCourier
         )
     }
 

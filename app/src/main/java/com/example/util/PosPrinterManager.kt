@@ -240,8 +240,9 @@ object PosPrinterManager {
         // Estimate canvas height
         val effectiveNote = if (customReceiptNote.isNotBlank()) customReceiptNote else order.orderNote
         val noteLinesCount = if (effectiveNote.isNotBlank()) effectiveNote.lines().size + 2 else 0
-        val estimatedLines = 26 + (items.size * 3) + store.receiptFooter.lines().size + noteLinesCount
-        val heightPx = estimatedLines * 24 + 120
+        val isOnline = store.businessType == BusinessType.ONLINE
+        val estimatedLines = 28 + (items.size * 3) + store.receiptFooter.lines().size + noteLinesCount + (if (isOnline) 10 else 0)
+        val heightPx = estimatedLines * 24 + 180
 
         val bitmap = Bitmap.createBitmap(widthPx, heightPx, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(bitmap)
@@ -249,8 +250,6 @@ object PosPrinterManager {
 
         var y = 30f
         val centerX = widthPx / 2f
-
-        val isOnline = store.businessType == BusinessType.ONLINE
 
         // 1. Store Header
         canvas.drawText(store.storeName.uppercase(), centerX, y, titlePaint)
@@ -300,8 +299,13 @@ object PosPrinterManager {
         if (isOnline) {
             drawTwoColumns("No. Pesanan :", order.orderId)
             drawTwoColumns("Waktu Order :", CurrencyFormatter.formatDate(order.timestamp))
-            drawTwoColumns("Admin Olshop:", order.cashierName.ifBlank { "Admin Toko" })
-            drawTwoColumns("Penerima    :", order.customerName)
+            // No cashier printed for online shop
+            val onlineRecipient = if (order.customerName.isBlank() || order.customerName.contains("Walk-In", ignoreCase = true)) {
+                "Pelanggan Online"
+            } else {
+                order.customerName
+            }
+            drawTwoColumns("Penerima    :", onlineRecipient)
             if (order.customerPhone.isNotBlank()) {
                 drawTwoColumns("No. WA/Telp :", order.customerPhone)
             }
@@ -414,11 +418,57 @@ object PosPrinterManager {
             y += 20f
         }
 
-        // 6. Store Footer Notes
+        // 6. Online Refund Warning Notice (Tebal, Bold, Huruf Besar Semua)
+        if (isOnline) {
+            val warningPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = Color.BLACK
+                textSize = 14f
+                typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+                textAlign = Paint.Align.CENTER
+            }
+
+            val warningNotice = "!!PERHATIAN JANGAN SAMPAI HILANG STRUK INI DAN SERTAKAN VIDEO UNBOXING KETIKA INGIN REFUND!!"
+            val words = warningNotice.split(" ")
+            val wrappedNoticeLines = mutableListOf<String>()
+            var cur = StringBuilder()
+            val maxNoticeWidth = contentWidth - 16
+            for (w in words) {
+                if (cur.isEmpty()) {
+                    cur.append(w)
+                } else if (warningPaint.measureText("$cur $w") <= maxNoticeWidth) {
+                    cur.append(" ").append(w)
+                } else {
+                    wrappedNoticeLines.add(cur.toString())
+                    cur = StringBuilder(w)
+                }
+            }
+            if (cur.isNotEmpty()) wrappedNoticeLines.add(cur.toString())
+
+            val boxPadding = 8f
+            val boxHeight = (wrappedNoticeLines.size * 20f) + (boxPadding * 2)
+            val boxRect = android.graphics.RectF(padding.toFloat(), y, (widthPx - padding).toFloat(), y + boxHeight)
+            val boxStrokePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = Color.BLACK
+                style = Paint.Style.STROKE
+                strokeWidth = 2.5f
+            }
+            canvas.drawRoundRect(boxRect, 6f, 6f, boxStrokePaint)
+
+            var textY = y + boxPadding + 15f
+            wrappedNoticeLines.forEach { line ->
+                canvas.drawText(line, centerX, textY, warningPaint)
+                textY += 20f
+            }
+            y += boxHeight + 14f
+            canvas.drawLine(padding.toFloat(), y, (widthPx - padding).toFloat(), y, linePaint)
+            y += 18f
+        }
+
+        // 7. Store Footer Notes
         val effectiveFooter = if (store.receiptFooter.isNotBlank()) {
             store.receiptFooter
         } else if (isOnline) {
-            "Terima kasih telah berbelanja online!\nMohon video unboxing saat buka paket ya kak 🙏"
+            "Terima kasih telah berbelanja online!\nKepuasan Anda adalah prioritas kami 🙏"
         } else {
             "Terima kasih atas kunjungan Anda!\nBarang yang sudah dibeli tidak dapat ditukar."
         }

@@ -334,7 +334,7 @@ fun PaymentCheckoutBottomSheet(
                             color = DarkSlate
                         )
                         Text(
-                            text = if (selectedCustomer != null) "Pelanggan: ${selectedCustomer.name} (${selectedCustomer.points} pts)" else "Pelanggan Walk-In",
+                            text = if (selectedCustomer != null) "Pelanggan: ${selectedCustomer.name} (${selectedCustomer.points} pts)" else if (isOnline) "Pesanan Online" else "Pelanggan Walk-In",
                             fontSize = 12.sp,
                             color = SlateMuted
                         )
@@ -1914,10 +1914,14 @@ fun PaymentCheckoutBottomSheet(
                     )
                 }
 
-                val isConfirmEnabled = when (selectedCategoryTab) {
-                    0 -> isCashSufficient
-                    1 -> true
-                    else -> false // All non-QRIS digital payment methods are disabled (Not Available)
+                val isConfirmEnabled = if (isOnline) {
+                    true
+                } else {
+                    when (selectedCategoryTab) {
+                        0 -> isCashSufficient
+                        1 -> true
+                        else -> false // All non-QRIS digital payment methods are disabled (Not Available)
+                    }
                 }
 
                 Button(
@@ -1925,21 +1929,46 @@ fun PaymentCheckoutBottomSheet(
                         val note = receiptMessageInput.trim()
                         val finalCustName = customerNameInput.trim().ifBlank { if (isOnline) "Pelanggan Online" else "Pelanggan Walk-In" }
                         val addr = shippingAddressInput.trim()
-                        when (selectedCategoryTab) {
-                            0 -> onProcessPayment(PaymentMethod.CASH, cashPaid, "", 0.0, 0.0, finalCustName, note, addr, selectedCourier, actualShippingFee)
-                            1 -> onProcessPayment(PaymentMethod.QRIS, 0.0, "", 0.0, 0.0, finalCustName, note, addr, selectedCourier, actualShippingFee)
-                            else -> {
-                                Toast.makeText(
-                                    context,
-                                    "Metode pembayaran ini belum tersedia. Silakan gunakan QRIS Toko atau Tunai.",
-                                    Toast.LENGTH_SHORT
-                                ).show()
+                        if (isOnline) {
+                            val (chosenMethod, cashVal) = when (selectedCategoryTab) {
+                                0 -> Pair(PaymentMethod.QRIS, 0.0)
+                                1 -> Pair(PaymentMethod.BANK_TRANSFER, 0.0)
+                                2 -> Pair(PaymentMethod.CASH, effectiveGrandTotal)
+                                else -> Pair(PaymentMethod.QRIS, 0.0)
+                            }
+                            onProcessPayment(
+                                chosenMethod,
+                                cashVal,
+                                "",
+                                0.0,
+                                0.0,
+                                finalCustName,
+                                note,
+                                addr,
+                                selectedCourier,
+                                actualShippingFee
+                            )
+                        } else {
+                            when (selectedCategoryTab) {
+                                0 -> onProcessPayment(PaymentMethod.CASH, cashPaid, "", 0.0, 0.0, finalCustName, note, addr, selectedCourier, actualShippingFee)
+                                1 -> onProcessPayment(PaymentMethod.QRIS, 0.0, "", 0.0, 0.0, finalCustName, note, addr, selectedCourier, actualShippingFee)
+                                else -> {
+                                    Toast.makeText(
+                                        context,
+                                        "Metode pembayaran ini belum tersedia. Silakan gunakan QRIS Toko atau Tunai.",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                }
                             }
                         }
                     },
                     enabled = isConfirmEnabled,
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = if (selectedCategoryTab == 1) EmeraldGreen else DeepRoyalBlue,
+                        containerColor = if (isOnline) {
+                            if (selectedCategoryTab == 2) EmeraldGreen else DeepRoyalBlue
+                        } else {
+                            if (selectedCategoryTab == 1) EmeraldGreen else DeepRoyalBlue
+                        },
                         disabledContainerColor = Color(0xFFE2E8F0),
                         disabledContentColor = SlateMuted
                     ),
@@ -1950,17 +1979,26 @@ fun PaymentCheckoutBottomSheet(
                         .testTag("confirm_payment_button")
                 ) {
                     Icon(
-                        imageVector = if (selectedCategoryTab == 2) Icons.Default.Lock else Icons.Default.Check,
+                        imageVector = if (!isOnline && selectedCategoryTab == 2) Icons.Default.Lock else Icons.Default.Check,
                         contentDescription = null,
                         tint = if (isConfirmEnabled) CrispWhite else SlateMuted,
                         modifier = Modifier.size(18.dp)
                     )
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
-                        text = when (selectedCategoryTab) {
-                            0 -> if (changeAmount > 0) "Bayar (Kembali ${CurrencyFormatter.formatRupiah(changeAmount)})" else "Selesaikan Bayar Pas"
-                            1 -> "Konfirmasi QRIS Selesai"
-                            else -> "Metode Belum Tersedia"
+                        text = if (isOnline) {
+                            when (selectedCategoryTab) {
+                                0 -> "Konfirmasi Bayar QRIS"
+                                1 -> "Konfirmasi Transfer Bank"
+                                2 -> "Proses Order COD"
+                                else -> "Konfirmasi Pesanan"
+                            }
+                        } else {
+                            when (selectedCategoryTab) {
+                                0 -> if (changeAmount > 0) "Bayar (Kembali ${CurrencyFormatter.formatRupiah(changeAmount)})" else "Selesaikan Bayar Pas"
+                                1 -> "Konfirmasi QRIS Selesai"
+                                else -> "Metode Belum Tersedia"
+                            }
                         },
                         fontWeight = FontWeight.Bold,
                         fontSize = 13.sp,

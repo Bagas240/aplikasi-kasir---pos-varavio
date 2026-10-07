@@ -131,7 +131,7 @@ fun AnalyticsScreen(
         countMap.toList().sortedByDescending { it.second }.take(5)
     }
 
-    val maxItemSales = topItems.firstOrNull()?.second ?: 1
+    val maxItemSales = (topItems.firstOrNull()?.second ?: 1).coerceAtLeast(1)
 
     Box(modifier = modifier.fillMaxSize().background(SoftGrayBg)) {
         Column(modifier = Modifier.fillMaxSize().padding(12.dp)) {

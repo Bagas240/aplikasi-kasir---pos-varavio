@@ -118,6 +118,7 @@ class LruCacheTest {
     }
 
     @Test
+    @Suppress("DEPRECATION")
     fun testTrimMemoryUnderPressure() {
         for (i in 1..5) {
             productCache.put(createProduct(i.toLong(), "Item $i", "BAR-$i", "SKU-$i"))

@@ -1138,7 +1138,7 @@ fun CashierScreen(
                                 .padding(bottom = 8.dp)
                         )
 
-                        // Option: Walk-In (None)
+                        // Option: Walk-In / Online Default (None)
                         Card(
                             onClick = {
                                 viewModel.selectCustomer(null)
@@ -1149,7 +1149,12 @@ fun CashierScreen(
                                 .padding(bottom = 6.dp),
                             colors = CardDefaults.cardColors(containerColor = Color(0xFFF1F5F9))
                         ) {
-                            Text("🚶 Pelanggan Walk-In (Tanpa Data)", modifier = Modifier.padding(10.dp), fontWeight = FontWeight.Medium, fontSize = 12.sp)
+                            Text(
+                                text = if (storeProfile.businessType == BusinessType.ONLINE) "🌐 Pembeli Online (Tanpa Member)" else "🚶 Pelanggan Walk-In (Tanpa Data)",
+                                modifier = Modifier.padding(10.dp),
+                                fontWeight = FontWeight.Medium,
+                                fontSize = 12.sp
+                            )
                         }
 
                         if (filteredCustomers.isEmpty()) {
@@ -1392,7 +1397,7 @@ fun CartSidebarView(
                     Icon(Icons.Default.Person, contentDescription = null, tint = DeepRoyalBlue, modifier = Modifier.size(16.dp))
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
-                        text = if (selectedCustomer != null) selectedCustomer.name else "Pelanggan: Walk-In",
+                        text = if (selectedCustomer != null) selectedCustomer.name else if (storeProfile.businessType == BusinessType.ONLINE) "Pelanggan Online" else "Pelanggan: Walk-In",
                         fontSize = 12.sp,
                         fontWeight = FontWeight.SemiBold,
                         color = DarkSlate
