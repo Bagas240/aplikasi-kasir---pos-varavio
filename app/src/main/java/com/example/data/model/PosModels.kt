@@ -173,7 +173,10 @@ data class OrderEntity(
     val itemsJson: String = "[]",
     val shiftId: Long = 0L,
     val shiftName: String = "",
-    val cashierRole: String = "Kasir"
+    val cashierRole: String = "Kasir",
+    val shippingAddress: String = "",
+    val courier: String = "",
+    val shippingFee: Double = 0.0
 )
 
 @Immutable
@@ -269,9 +272,25 @@ data class TransactionLog(
     val notes: String = ""
 )
 
+enum class BusinessType(val label: String, val shortLabel: String, val description: String) {
+    OFFLINE(
+        label = "Usaha Offline (Toko Fisik / POS)",
+        shortLabel = "Toko Offline",
+        description = "Toko fisik dengan kasir langsung, laci uang tunai, shift kerja & struk kasir"
+    ),
+    ONLINE(
+        label = "Usaha Online (Online Shop / Olshop)",
+        shortLabel = "Toko Online",
+        description = "Toko online / e-commerce, invoice digital, resi ekspedisi, tanpa kasir fisik & shift"
+    )
+}
+
 @Immutable
 data class StoreProfile(
     val storeName: String = "VORAVIO MART",
+    val businessType: BusinessType = BusinessType.OFFLINE,
+    val onlineStoreLink: String = "",
+    val defaultCourier: String = "J&T Express",
     val address: String = "Jl. Thamrin No. 88, Jakarta Pusat",
     val phone: String = "+62 812-3456-7890",
     val instagram: String = "@voraviopos.id",

@@ -42,6 +42,7 @@ import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.CreditCard
+import androidx.compose.material.icons.filled.LocalShipping
 import androidx.compose.material.icons.filled.Payments
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.QrCode
@@ -156,7 +157,7 @@ fun PaymentCheckoutBottomSheet(
     selectedCustomer: Customer? = null,
     storeProfile: StoreProfile = StoreProfile(),
     onUpdateQrisImage: ((String?) -> Unit)? = null,
-    onProcessPayment: (method: PaymentMethod, cashPaid: Double, splitMethod2: String, splitAmt1: Double, splitAmt2: Double, customerName: String, receiptNote: String) -> Unit,
+    onProcessPayment: (method: PaymentMethod, cashPaid: Double, splitMethod2: String, splitAmt1: Double, splitAmt2: Double, customerName: String, receiptNote: String, shippingAddress: String, courier: String, shippingFee: Double) -> Unit,
     onDismiss: () -> Unit
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -164,19 +165,34 @@ fun PaymentCheckoutBottomSheet(
     val clipboardManager = LocalClipboardManager.current
     val focusManager = LocalFocusManager.current
 
-    // Customer Name State (Optional)
-    var customerNameInput by remember { mutableStateOf(selectedCustomer?.name ?: "") }
-    var receiptMessageInput by remember { mutableStateOf("") }
-    var showReceiptMsgField by remember { mutableStateOf(false) }
+    val isOnline = storeProfile.businessType == com.example.data.model.BusinessType.ONLINE
 
-    // Payment Category Tab: 0 = Cash / Tunai, 1 = QRIS Toko, 2 = Kartu / Lainnya
+    // Customer & Shipping State for Online Orders
+    var customerNameInput by remember { mutableStateOf(selectedCustomer?.name ?: "") }
+    var recipientPhoneInput by remember { mutableStateOf(selectedCustomer?.phone ?: "") }
+    var shippingAddressInput by remember { mutableStateOf("") }
+    var selectedCourier by remember { mutableStateOf(storeProfile.defaultCourier.ifBlank { "J&T Express" }) }
+    var shippingFeeInput by remember { mutableStateOf("0") }
+    val actualShippingFee = if (isOnline) (shippingFeeInput.toDoubleOrNull() ?: 0.0).coerceAtLeast(0.0) else 0.0
+    val effectiveGrandTotal = grandTotal + actualShippingFee
+
+    var receiptMessageInput by remember {
+        mutableStateOf(
+            if (isOnline) "Mohon rekam video saat unboxing paket! Terima kasih telah berbelanja online." else ""
+        )
+    }
+    var showReceiptMsgField by remember { mutableStateOf(isOnline) }
+
+    // Payment Category Tab:
+    // Offline: 0 = Cash / Tunai, 1 = QRIS Toko, 2 = Kartu / Lainnya
+    // Online: 0 = QRIS Toko, 1 = Transfer Bank, 2 = COD / Tunai
     var selectedCategoryTab by remember { mutableIntStateOf(0) }
 
     // Cash Payment State
-    var cashPaidInput by remember { mutableStateOf(grandTotal.toInt().toString()) }
+    var cashPaidInput by remember(effectiveGrandTotal) { mutableStateOf(effectiveGrandTotal.toInt().toString()) }
     val cashPaid = cashPaidInput.toDoubleOrNull() ?: 0.0
-    val changeAmount = (cashPaid - grandTotal).coerceAtLeast(0.0)
-    val isCashSufficient = cashPaid >= grandTotal
+    val changeAmount = (cashPaid - effectiveGrandTotal).coerceAtLeast(0.0)
+    val isCashSufficient = cashPaid >= effectiveGrandTotal
 
     // Digital Payment State
     var selectedDigitalMethod by remember { mutableStateOf(PaymentMethod.QRIS) }
@@ -186,7 +202,7 @@ fun PaymentCheckoutBottomSheet(
     var cardApprovalCode by remember { mutableStateOf("") }
     var selectedEWallet by remember { mutableStateOf("GoPay") }
     var eWalletPhone by remember { mutableStateOf(selectedCustomer?.phone ?: "") }
-    var splitCashAmtInput by remember { mutableStateOf((grandTotal / 2).toInt().toString()) }
+    var splitCashAmtInput by remember(effectiveGrandTotal) { mutableStateOf((effectiveGrandTotal / 2).toInt().toString()) }
     var splitDigitalMethod by remember { mutableStateOf(PaymentMethod.QRIS.name) }
     var debtDueDateDays by remember { mutableIntStateOf(7) }
 
@@ -194,8 +210,8 @@ fun PaymentCheckoutBottomSheet(
     var qrisSimulatedSuccess by remember { mutableStateOf(false) }
 
     // Auto-calculated Cash Denominations and Change Suggestions
-    val smartDenominations = remember(grandTotal) {
-        generateSmartCashPresets(grandTotal)
+    val smartDenominations = remember(effectiveGrandTotal) {
+        generateSmartCashPresets(effectiveGrandTotal)
     }
 
     // Change Banknote Breakdown (Pecahan Kembalian)
@@ -343,13 +359,13 @@ fun PaymentCheckoutBottomSheet(
                     .fillMaxWidth()
                     .padding(horizontal = 20.dp, vertical = 10.dp),
                 shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = DeepRoyalBlue),
+                colors = CardDefaults.cardColors(containerColor = if (isOnline) EmeraldGreen else DeepRoyalBlue),
                 elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
             ) {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .background(DeepRoyalBlue)
+                        .background(if (isOnline) EmeraldGreen else DeepRoyalBlue)
                         .padding(horizontal = 18.dp, vertical = 14.dp)
                 ) {
                     Row(
@@ -359,7 +375,7 @@ fun PaymentCheckoutBottomSheet(
                     ) {
                         Column {
                             Text(
-                                text = "TOTAL TAGIHAN",
+                                text = if (isOnline) "TOTAL PESANAN ONLINE" else "TOTAL TAGIHAN",
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = CrispWhite.copy(alpha = 0.8f),
@@ -367,11 +383,18 @@ fun PaymentCheckoutBottomSheet(
                             )
                             Spacer(modifier = Modifier.height(2.dp))
                             Text(
-                                text = CurrencyFormatter.formatRupiah(grandTotal),
+                                text = CurrencyFormatter.formatRupiah(effectiveGrandTotal),
                                 fontSize = 24.sp,
                                 fontWeight = FontWeight.ExtraBold,
                                 color = CrispWhite
                             )
+                            if (isOnline && actualShippingFee > 0) {
+                                Text(
+                                    text = "Termasuk Ongkir: ${CurrencyFormatter.formatRupiah(actualShippingFee)}",
+                                    fontSize = 11.sp,
+                                    color = CrispWhite.copy(alpha = 0.9f)
+                                )
+                            }
                         }
 
                         // Right badge: items summary
@@ -384,7 +407,7 @@ fun PaymentCheckoutBottomSheet(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text(
-                                    text = "$itemsCount Item",
+                                    text = if (isOnline) "$itemsCount Item • Online" else "$itemsCount Item",
                                     color = CrispWhite,
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.SemiBold
@@ -395,29 +418,126 @@ fun PaymentCheckoutBottomSheet(
                 }
             }
 
-            // Optional Customer Name Input Field
-            OutlinedTextField(
-                value = customerNameInput,
-                onValueChange = { customerNameInput = it },
-                label = { Text("Nama Pelanggan (Opsional)") },
-                placeholder = { Text("Contoh: Ibu Ani / Meja 2 / Walk-In") },
-                leadingIcon = { Icon(Icons.Default.Person, contentDescription = null, tint = DeepRoyalBlue, modifier = Modifier.size(18.dp)) },
-                singleLine = true,
-                shape = RoundedCornerShape(10.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 20.dp, vertical = 6.dp)
-                    .testTag("checkout_customer_name_input")
-            )
+            if (isOnline) {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp, vertical = 4.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFFF0FDF4)),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFBBF7D0))
+                ) {
+                    Column(modifier = Modifier.padding(12.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.LocalShipping, contentDescription = null, tint = EmeraldGreen, modifier = Modifier.size(18.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("Informasi Pengiriman & Ekspedisi", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = DarkSlate)
+                        }
+                        Spacer(modifier = Modifier.height(8.dp))
 
-            // Optional Personalized Message for Receipt
+                        // Nama Penerima & No WA
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            OutlinedTextField(
+                                value = customerNameInput,
+                                onValueChange = { customerNameInput = it },
+                                label = { Text("Nama Penerima") },
+                                placeholder = { Text("Nama lengkap...") },
+                                singleLine = true,
+                                shape = RoundedCornerShape(8.dp),
+                                modifier = Modifier.weight(1f)
+                            )
+                            OutlinedTextField(
+                                value = recipientPhoneInput,
+                                onValueChange = { recipientPhoneInput = it },
+                                label = { Text("No. WA/Telp") },
+                                placeholder = { Text("08xxx...") },
+                                singleLine = true,
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+                                shape = RoundedCornerShape(8.dp),
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        // Alamat Pengiriman
+                        OutlinedTextField(
+                            value = shippingAddressInput,
+                            onValueChange = { shippingAddressInput = it },
+                            label = { Text("Alamat Lengkap Pengiriman") },
+                            placeholder = { Text("Jalan, RT/RW, Kelurahan, Kecamatan, Kota & Kodepos...") },
+                            maxLines = 2,
+                            shape = RoundedCornerShape(8.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        )
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        // Pilihan Ekspedisi Kurir & Ongkir
+                        Text("Pilih Kurir Ekspedisi:", fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = DarkSlate)
+                        Spacer(modifier = Modifier.height(4.dp))
+                        val courierOptions = listOf("J&T Express", "JNE", "SiCepat", "GoSend", "GrabExpress", "Anteraja", "Shopee Xpress")
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .horizontalScroll(rememberScrollState()),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            courierOptions.forEach { cr ->
+                                val isSelected = selectedCourier == cr
+                                FilterChip(
+                                    selected = isSelected,
+                                    onClick = { selectedCourier = cr },
+                                    label = { Text(cr, fontSize = 11.sp) },
+                                    colors = FilterChipDefaults.filterChipColors(
+                                        selectedContainerColor = EmeraldGreen,
+                                        selectedLabelColor = CrispWhite,
+                                        containerColor = CrispWhite
+                                    )
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        OutlinedTextField(
+                            value = shippingFeeInput,
+                            onValueChange = { input -> shippingFeeInput = input.filter { it.isDigit() } },
+                            label = { Text("Biaya Ongkos Kirim (Rp)") },
+                            placeholder = { Text("0 jika gratis ongkir") },
+                            leadingIcon = { Text("Rp ", fontWeight = FontWeight.Bold, color = DarkSlate) },
+                            singleLine = true,
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            shape = RoundedCornerShape(8.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                }
+            } else {
+                // Offline Customer Name Input Field
+                OutlinedTextField(
+                    value = customerNameInput,
+                    onValueChange = { customerNameInput = it },
+                    label = { Text("Nama Pelanggan (Opsional)") },
+                    placeholder = { Text("Contoh: Ibu Ani / Meja 2 / Walk-In") },
+                    leadingIcon = { Icon(Icons.Default.Person, contentDescription = null, tint = DeepRoyalBlue, modifier = Modifier.size(18.dp)) },
+                    singleLine = true,
+                    shape = RoundedCornerShape(10.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp, vertical = 6.dp)
+                        .testTag("checkout_customer_name_input")
+                )
+            }
+
+            // Optional Personalized Message for Receipt / Invoice
             if (showReceiptMsgField || receiptMessageInput.isNotBlank()) {
                 OutlinedTextField(
                     value = receiptMessageInput,
                     onValueChange = { receiptMessageInput = it },
-                    label = { Text("💌 Pesan Khusus di Struk (Opsional)") },
-                    placeholder = { Text("Contoh: Terima kasih Kak! Semoga harinya ceria ❤️") },
-                    leadingIcon = { Icon(Icons.Default.Favorite, contentDescription = null, tint = DeepRoyalBlue, modifier = Modifier.size(18.dp)) },
+                    label = { Text(if (isOnline) "💌 Catatan di Invoice Online / Label" else "💌 Pesan Khusus di Struk (Opsional)") },
+                    placeholder = { Text(if (isOnline) "Contoh: Mohon video unboxing paket ✨" else "Contoh: Terima kasih Kak! Semoga harinya ceria ❤️") },
+                    leadingIcon = { Icon(Icons.Default.Favorite, contentDescription = null, tint = if (isOnline) EmeraldGreen else DeepRoyalBlue, modifier = Modifier.size(18.dp)) },
                     trailingIcon = {
                         IconButton(onClick = { receiptMessageInput = ""; showReceiptMsgField = false }) {
                             Icon(Icons.Default.Close, contentDescription = "Tutup", modifier = Modifier.size(16.dp))
@@ -441,9 +561,9 @@ fun PaymentCheckoutBottomSheet(
                         onClick = { showReceiptMsgField = true },
                         contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp)
                     ) {
-                        Icon(Icons.Default.Favorite, contentDescription = null, tint = DeepRoyalBlue, modifier = Modifier.size(14.dp))
+                        Icon(Icons.Default.Favorite, contentDescription = null, tint = if (isOnline) EmeraldGreen else DeepRoyalBlue, modifier = Modifier.size(14.dp))
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text("+ Tambah Pesan Hangat di Struk", fontSize = 11.sp, color = DeepRoyalBlue, fontWeight = FontWeight.SemiBold)
+                        Text(if (isOnline) "+ Tambah Catatan di Invoice" else "+ Tambah Pesan Hangat di Struk", fontSize = 11.sp, color = if (isOnline) EmeraldGreen else DeepRoyalBlue, fontWeight = FontWeight.SemiBold)
                     }
                 }
             }
@@ -452,7 +572,7 @@ fun PaymentCheckoutBottomSheet(
             TabRow(
                 selectedTabIndex = selectedCategoryTab,
                 containerColor = SoftGrayBg,
-                contentColor = DeepRoyalBlue,
+                contentColor = if (isOnline) EmeraldGreen else DeepRoyalBlue,
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 20.dp)
@@ -462,79 +582,108 @@ fun PaymentCheckoutBottomSheet(
                     TabRowDefaults.Indicator(
                         modifier = Modifier.tabIndicatorOffset(tabPositions[selectedCategoryTab]),
                         height = 3.dp,
-                        color = DeepRoyalBlue
+                        color = if (isOnline) EmeraldGreen else DeepRoyalBlue
                     )
                 },
                 divider = {}
             ) {
-                Tab(
-                    selected = selectedCategoryTab == 0,
-                    onClick = { selectedCategoryTab = 0 },
-                    text = {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                Icons.Default.Payments,
-                                contentDescription = null,
-                                modifier = Modifier.size(16.dp)
-                            )
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text(
-                                "💵 Tunai",
-                                fontWeight = if (selectedCategoryTab == 0) FontWeight.Bold else FontWeight.Medium,
-                                fontSize = 12.sp
-                            )
-                        }
-                    },
-                    selectedContentColor = DeepRoyalBlue,
-                    unselectedContentColor = SlateMuted
-                )
+                if (isOnline) {
+                    Tab(
+                        selected = selectedCategoryTab == 0,
+                        onClick = {
+                            selectedCategoryTab = 0
+                            selectedDigitalMethod = PaymentMethod.QRIS
+                        },
+                        text = {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.QrCodeScanner, contentDescription = null, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text("📱 QRIS Toko", fontWeight = if (selectedCategoryTab == 0) FontWeight.Bold else FontWeight.Medium, fontSize = 12.sp)
+                            }
+                        },
+                        selectedContentColor = EmeraldGreen,
+                        unselectedContentColor = SlateMuted
+                    )
 
-                Tab(
-                    selected = selectedCategoryTab == 1,
-                    onClick = {
-                        selectedCategoryTab = 1
-                        selectedDigitalMethod = PaymentMethod.QRIS
-                    },
-                    text = {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                Icons.Default.QrCodeScanner,
-                                contentDescription = null,
-                                modifier = Modifier.size(16.dp)
-                            )
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text(
-                                "📱 QRIS",
-                                fontWeight = if (selectedCategoryTab == 1) FontWeight.Bold else FontWeight.Medium,
-                                fontSize = 12.sp
-                            )
-                        }
-                    },
-                    selectedContentColor = DeepRoyalBlue,
-                    unselectedContentColor = SlateMuted
-                )
+                    Tab(
+                        selected = selectedCategoryTab == 1,
+                        onClick = {
+                            selectedCategoryTab = 1
+                            selectedDigitalMethod = PaymentMethod.BANK_TRANSFER
+                        },
+                        text = {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.AccountBalance, contentDescription = null, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text("🏦 Transfer Bank", fontWeight = if (selectedCategoryTab == 1) FontWeight.Bold else FontWeight.Medium, fontSize = 12.sp)
+                            }
+                        },
+                        selectedContentColor = EmeraldGreen,
+                        unselectedContentColor = SlateMuted
+                    )
 
-                Tab(
-                    selected = selectedCategoryTab == 2,
-                    onClick = { selectedCategoryTab = 2 },
-                    text = {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                Icons.Default.CreditCard,
-                                contentDescription = null,
-                                modifier = Modifier.size(16.dp)
-                            )
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text(
-                                "💳 Lainnya",
-                                fontWeight = if (selectedCategoryTab == 2) FontWeight.Bold else FontWeight.Medium,
-                                fontSize = 12.sp
-                            )
-                        }
-                    },
-                    selectedContentColor = DeepRoyalBlue,
-                    unselectedContentColor = SlateMuted
-                )
+                    Tab(
+                        selected = selectedCategoryTab == 2,
+                        onClick = {
+                            selectedCategoryTab = 2
+                            selectedDigitalMethod = PaymentMethod.CASH
+                        },
+                        text = {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.LocalShipping, contentDescription = null, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text("📦 COD / Tunai", fontWeight = if (selectedCategoryTab == 2) FontWeight.Bold else FontWeight.Medium, fontSize = 12.sp)
+                            }
+                        },
+                        selectedContentColor = EmeraldGreen,
+                        unselectedContentColor = SlateMuted
+                    )
+                } else {
+                    Tab(
+                        selected = selectedCategoryTab == 0,
+                        onClick = { selectedCategoryTab = 0 },
+                        text = {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.Payments, contentDescription = null, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text("💵 Tunai", fontWeight = if (selectedCategoryTab == 0) FontWeight.Bold else FontWeight.Medium, fontSize = 12.sp)
+                            }
+                        },
+                        selectedContentColor = DeepRoyalBlue,
+                        unselectedContentColor = SlateMuted
+                    )
+
+                    Tab(
+                        selected = selectedCategoryTab == 1,
+                        onClick = {
+                            selectedCategoryTab = 1
+                            selectedDigitalMethod = PaymentMethod.QRIS
+                        },
+                        text = {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.QrCodeScanner, contentDescription = null, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text("📱 QRIS", fontWeight = if (selectedCategoryTab == 1) FontWeight.Bold else FontWeight.Medium, fontSize = 12.sp)
+                            }
+                        },
+                        selectedContentColor = DeepRoyalBlue,
+                        unselectedContentColor = SlateMuted
+                    )
+
+                    Tab(
+                        selected = selectedCategoryTab == 2,
+                        onClick = { selectedCategoryTab = 2 },
+                        text = {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.CreditCard, contentDescription = null, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text("💳 Lainnya", fontWeight = if (selectedCategoryTab == 2) FontWeight.Bold else FontWeight.Medium, fontSize = 12.sp)
+                            }
+                        },
+                        selectedContentColor = DeepRoyalBlue,
+                        unselectedContentColor = SlateMuted
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.height(10.dp))
@@ -547,7 +696,7 @@ fun PaymentCheckoutBottomSheet(
                     .verticalScroll(rememberScrollState())
                     .padding(horizontal = 20.dp)
             ) {
-                if (selectedCategoryTab == 0) {
+                if (!isOnline && selectedCategoryTab == 0) {
                     // ==========================================
                     // CASH PAYMENT SECTION
                     // ==========================================
@@ -860,7 +1009,7 @@ fun PaymentCheckoutBottomSheet(
                         }
                     }
 
-                } else if (selectedCategoryTab == 1) {
+                } else if ((isOnline && selectedCategoryTab == 0) || (!isOnline && selectedCategoryTab == 1)) {
                     // ==========================================
                     // DEDICATED QRIS TOKO PAYMENT VIEW
                     // ==========================================
@@ -1036,7 +1185,19 @@ fun PaymentCheckoutBottomSheet(
                             // One-tap customer payment complete & dismiss button
                             Button(
                                 onClick = {
-                                    onProcessPayment(PaymentMethod.QRIS, 0.0, "", 0.0, 0.0, customerNameInput.trim(), receiptMessageInput.trim())
+                                    val finalCustName = customerNameInput.trim().ifBlank { if (isOnline) "Pelanggan Online" else "Pelanggan Walk-In" }
+                                    onProcessPayment(
+                                        PaymentMethod.QRIS,
+                                        0.0,
+                                        "",
+                                        0.0,
+                                        0.0,
+                                        finalCustName,
+                                        receiptMessageInput.trim(),
+                                        shippingAddressInput.trim(),
+                                        selectedCourier,
+                                        actualShippingFee
+                                    )
                                 },
                                 colors = ButtonDefaults.buttonColors(containerColor = EmeraldGreen),
                                 shape = RoundedCornerShape(12.dp),
@@ -1048,11 +1209,153 @@ fun PaymentCheckoutBottomSheet(
                                 Icon(Icons.Default.CheckCircle, contentDescription = null, tint = CrispWhite, modifier = Modifier.size(20.dp))
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(
-                                    text = "Pelanggan Sudah Bayar (Tutup QRIS)",
+                                    text = if (isOnline) "Pelanggan Sudah Bayar via QRIS (Selesaikan)" else "Pelanggan Sudah Bayar (Tutup QRIS)",
                                     fontWeight = FontWeight.Bold,
                                     fontSize = 13.sp,
                                     color = CrispWhite
                                 )
+                            }
+                        }
+                    }
+                } else if (isOnline && selectedCategoryTab == 1) {
+                    // ==========================================
+                    // ONLINE: TRANSFER BANK / VIRTUAL ACCOUNT
+                    // ==========================================
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(16.dp),
+                        colors = CardDefaults.cardColors(containerColor = CrispWhite),
+                        border = androidx.compose.foundation.BorderStroke(1.5.dp, DeepRoyalBlue)
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp)
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.AccountBalance, contentDescription = null, tint = DeepRoyalBlue, modifier = Modifier.size(24.dp))
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Column {
+                                    Text("Transfer Bank / Virtual Account", fontWeight = FontWeight.Bold, fontSize = 15.sp, color = DarkSlate)
+                                    Text("Pembayaran transfer ke rekening toko online", fontSize = 11.sp, color = Color(0xFF64748B))
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.height(14.dp))
+
+                            val banks = listOf(
+                                Triple("BCA", "8830-1928-3120", storeProfile.storeName.ifBlank { "Toko Online" }),
+                                Triple("Mandiri", "137-00-1928312-5", storeProfile.storeName.ifBlank { "Toko Online" }),
+                                Triple("BRI", "0206-01-019283-50-8", storeProfile.storeName.ifBlank { "Toko Online" })
+                            )
+                            banks.forEach { (bankName, accNo, accHolder) ->
+                                Card(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(vertical = 4.dp),
+                                    colors = CardDefaults.cardColors(containerColor = Color(0xFFF8FAFC)),
+                                    border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE2E8F0)),
+                                    shape = RoundedCornerShape(10.dp)
+                                ) {
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(12.dp),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Column {
+                                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                                Surface(
+                                                    color = DeepRoyalBlue,
+                                                    shape = RoundedCornerShape(4.dp)
+                                                ) {
+                                                    Text(bankName, color = CrispWhite, fontWeight = FontWeight.Bold, fontSize = 10.sp, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp))
+                                                }
+                                                Spacer(modifier = Modifier.width(8.dp))
+                                                Text(accNo, fontWeight = FontWeight.ExtraBold, fontSize = 13.sp, color = DarkSlate)
+                                            }
+                                            Text("a.n. $accHolder", fontSize = 11.sp, color = Color(0xFF64748B))
+                                        }
+
+                                        IconButton(
+                                            onClick = {
+                                                clipboardManager.setText(androidx.compose.ui.text.AnnotatedString(accNo.replace("-", "")))
+                                                Toast.makeText(context, "Nomor rekening $bankName disalin!", Toast.LENGTH_SHORT).show()
+                                            },
+                                            modifier = Modifier.size(32.dp)
+                                        ) {
+                                            Icon(Icons.Default.ContentCopy, contentDescription = "Salin", tint = DeepRoyalBlue, modifier = Modifier.size(16.dp))
+                                        }
+                                    }
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.height(10.dp))
+                            Surface(
+                                color = Color(0xFFEFF6FF),
+                                shape = RoundedCornerShape(8.dp),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Row(modifier = Modifier.padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(Icons.Default.Info, contentDescription = null, tint = DeepRoyalBlue, modifier = Modifier.size(16.dp))
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text("Transfer tepat ${CurrencyFormatter.formatRupiah(effectiveGrandTotal)} agar pesanan cepat terverifikasi.", fontSize = 11.sp, color = DeepRoyalBlue)
+                                }
+                            }
+                        }
+                    }
+                } else if (isOnline && selectedCategoryTab == 2) {
+                    // ==========================================
+                    // ONLINE: CASH ON DELIVERY (COD)
+                    // ==========================================
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(16.dp),
+                        colors = CardDefaults.cardColors(containerColor = CrispWhite),
+                        border = androidx.compose.foundation.BorderStroke(1.5.dp, EmeraldGreen)
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp)
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.LocalShipping, contentDescription = null, tint = EmeraldGreen, modifier = Modifier.size(24.dp))
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Column {
+                                    Text("Cash On Delivery (COD)", fontWeight = FontWeight.Bold, fontSize = 15.sp, color = DarkSlate)
+                                    Text("Pelanggan bayar tunai ke kurir saat paket sampai", fontSize = 11.sp, color = Color(0xFF64748B))
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.height(12.dp))
+
+                            Card(
+                                colors = CardDefaults.cardColors(containerColor = Color(0xFFECFDF5)),
+                                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFA7F3D0)),
+                                shape = RoundedCornerShape(10.dp),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Column(modifier = Modifier.padding(12.dp)) {
+                                    Text("Rincian Tagihan COD Kurir:", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = DarkSlate)
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                        Text("Subtotal Produk", fontSize = 12.sp, color = Color(0xFF64748B))
+                                        Text(CurrencyFormatter.formatRupiah(grandTotal), fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                                    }
+                                    if (actualShippingFee > 0) {
+                                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                            Text("Ongkos Kirim ($selectedCourier)", fontSize = 12.sp, color = Color(0xFF64748B))
+                                            Text(CurrencyFormatter.formatRupiah(actualShippingFee), fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                                        }
+                                    }
+                                    Divider(color = Color(0xFF6EE7B7), modifier = Modifier.padding(vertical = 6.dp))
+                                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                        Text("Total Tagihan COD", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = DarkSlate)
+                                        Text(CurrencyFormatter.formatRupiah(effectiveGrandTotal), fontSize = 15.sp, fontWeight = FontWeight.ExtraBold, color = EmeraldDark)
+                                    }
+                                }
                             }
                         }
                     }
@@ -1620,9 +1923,11 @@ fun PaymentCheckoutBottomSheet(
                 Button(
                     onClick = {
                         val note = receiptMessageInput.trim()
+                        val finalCustName = customerNameInput.trim().ifBlank { if (isOnline) "Pelanggan Online" else "Pelanggan Walk-In" }
+                        val addr = shippingAddressInput.trim()
                         when (selectedCategoryTab) {
-                            0 -> onProcessPayment(PaymentMethod.CASH, cashPaid, "", 0.0, 0.0, customerNameInput.trim(), note)
-                            1 -> onProcessPayment(PaymentMethod.QRIS, 0.0, "", 0.0, 0.0, customerNameInput.trim(), note)
+                            0 -> onProcessPayment(PaymentMethod.CASH, cashPaid, "", 0.0, 0.0, finalCustName, note, addr, selectedCourier, actualShippingFee)
+                            1 -> onProcessPayment(PaymentMethod.QRIS, 0.0, "", 0.0, 0.0, finalCustName, note, addr, selectedCourier, actualShippingFee)
                             else -> {
                                 Toast.makeText(
                                     context,
@@ -1778,7 +2083,19 @@ fun PaymentCheckoutBottomSheet(
                         Button(
                             onClick = {
                                 showFullScreenQris = false
-                                onProcessPayment(PaymentMethod.QRIS, 0.0, "", 0.0, 0.0, customerNameInput.trim(), receiptMessageInput.trim())
+                                val finalCustName = customerNameInput.trim().ifBlank { if (isOnline) "Pelanggan Online" else "Pelanggan Walk-In" }
+                                onProcessPayment(
+                                    PaymentMethod.QRIS,
+                                    0.0,
+                                    "",
+                                    0.0,
+                                    0.0,
+                                    finalCustName,
+                                    receiptMessageInput.trim(),
+                                    shippingAddressInput.trim(),
+                                    selectedCourier,
+                                    actualShippingFee
+                                )
                             },
                             colors = ButtonDefaults.buttonColors(containerColor = EmeraldGreen),
                             shape = RoundedCornerShape(14.dp),

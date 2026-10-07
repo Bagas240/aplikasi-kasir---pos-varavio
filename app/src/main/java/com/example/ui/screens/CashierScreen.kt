@@ -84,6 +84,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.data.model.BusinessType
 import com.example.data.model.CartItem
 import com.example.data.model.Customer
 import com.example.data.model.OrderEntity
@@ -702,7 +703,7 @@ fun CashierScreen(
                                     }
                                     Spacer(modifier = Modifier.width(6.dp))
                                     Text(
-                                        text = "Keranjang Belanja",
+                                        text = if (storeProfile.businessType == BusinessType.ONLINE) "Pesanan Pelanggan" else "Keranjang Belanja",
                                         fontSize = 13.sp,
                                         fontWeight = FontWeight.Medium,
                                         color = Color(0xFF64748B)
@@ -737,7 +738,12 @@ fun CashierScreen(
                                 ) {
                                     Icon(Icons.Default.Payment, contentDescription = null, modifier = Modifier.size(18.dp), tint = CrispWhite)
                                     Spacer(modifier = Modifier.width(6.dp))
-                                    Text("Bayar", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = CrispWhite)
+                                    Text(
+                                        text = if (storeProfile.businessType == BusinessType.ONLINE) "Proses Order" else "Bayar",
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 14.sp,
+                                        color = CrispWhite
+                                    )
                                 }
                             }
                         }
@@ -768,9 +774,14 @@ fun CashierScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Column {
-                        Text("Keranjang Belanja", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = DarkSlate)
                         Text(
-                            text = if (selectedCustomer != null) "Pelanggan: ${selectedCustomer!!.name} (${selectedCustomer!!.points} poin)" else "Pelanggan: Walk-In",
+                            text = if (storeProfile.businessType == BusinessType.ONLINE) "Daftar Pesanan Online" else "Keranjang Belanja",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 18.sp,
+                            color = DarkSlate
+                        )
+                        Text(
+                            text = if (selectedCustomer != null) "Pelanggan: ${selectedCustomer!!.name} (${selectedCustomer!!.points} poin)" else if (storeProfile.businessType == BusinessType.ONLINE) "Pelanggan Online" else "Pelanggan: Walk-In",
                             fontSize = 12.sp,
                             color = VibrantBlue
                         )
@@ -878,7 +889,16 @@ fun CashierScreen(
                         .height(50.dp),
                     shape = RoundedCornerShape(10.dp)
                 ) {
-                    Text("Lanjut ke Pembayaran (${CurrencyFormatter.formatRupiah(viewModel.cartGrandTotal)})", fontWeight = FontWeight.Bold, fontSize = 15.sp, color = CrispWhite)
+                    Text(
+                        text = if (storeProfile.businessType == BusinessType.ONLINE) {
+                            "Lanjut Checkout Order (${CurrencyFormatter.formatRupiah(viewModel.cartGrandTotal)})"
+                        } else {
+                            "Lanjut ke Pembayaran (${CurrencyFormatter.formatRupiah(viewModel.cartGrandTotal)})"
+                        },
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 15.sp,
+                        color = CrispWhite
+                    )
                 }
                 Spacer(modifier = Modifier.height(16.dp))
             }
@@ -893,9 +913,20 @@ fun CashierScreen(
             selectedCustomer = selectedCustomer,
             storeProfile = storeProfile,
             onUpdateQrisImage = { uri -> viewModel.updateStoreQrisImage(uri) },
-            onProcessPayment = { method, cashPaid, splitMethod2, splitAmt1, splitAmt2, custName, receiptNote ->
+            onProcessPayment = { method, cashPaid, splitMethod2, splitAmt1, splitAmt2, custName, receiptNote, shippingAddr, courier, shippingFee ->
                 showCheckoutDialog = false
-                viewModel.processCheckout(method, cashPaid, splitMethod2, splitAmt1, splitAmt2, custName, receiptNote)
+                viewModel.processCheckout(
+                    method = method,
+                    cashPaid = cashPaid,
+                    splitMethod2 = splitMethod2,
+                    splitAmt1 = splitAmt1,
+                    splitAmt2 = splitAmt2,
+                    customerName = custName,
+                    receiptNote = receiptNote,
+                    shippingAddress = shippingAddr,
+                    courier = courier,
+                    shippingFee = shippingFee
+                )
             },
             onDismiss = { showCheckoutDialog = false }
         )
@@ -1300,7 +1331,12 @@ fun CartSidebarView(
                 }
                 Spacer(modifier = Modifier.width(8.dp))
                 Column {
-                    Text("Keranjang Kasir", fontWeight = FontWeight.Bold, fontSize = 15.sp, color = DarkSlate)
+                    Text(
+                        text = if (storeProfile.businessType == BusinessType.ONLINE) "Pesanan Online" else "Keranjang Kasir",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 15.sp,
+                        color = DarkSlate
+                    )
                     Text("${cartItems.sumOf { it.quantity }} Produk Ditambahkan", fontSize = 11.sp, color = Color(0xFF64748B))
                 }
             }
@@ -1502,7 +1538,13 @@ fun CartSidebarView(
                 )
                 Spacer(modifier = Modifier.width(6.dp))
                 Text(
-                    text = if (cartItems.isEmpty()) "Keranjang Kosong" else "Bayar ${CurrencyFormatter.formatRupiah(viewModel.cartGrandTotal)}",
+                    text = if (cartItems.isEmpty()) {
+                        "Pesanan Kosong"
+                    } else if (storeProfile.businessType == BusinessType.ONLINE) {
+                        "Proses Order ${CurrencyFormatter.formatRupiah(viewModel.cartGrandTotal)}"
+                    } else {
+                        "Bayar ${CurrencyFormatter.formatRupiah(viewModel.cartGrandTotal)}"
+                    },
                     fontWeight = FontWeight.Bold,
                     fontSize = 13.sp,
                     color = if (cartItems.isNotEmpty()) CrispWhite else SlateMuted
@@ -1738,7 +1780,7 @@ fun CartItemRow(
 fun CheckoutGatewayDialog(
     grandTotal: Double,
     selectedCustomer: Customer?,
-    onProcessPayment: (method: PaymentMethod, cashPaid: Double, splitMethod2: String, splitAmt1: Double, splitAmt2: Double, customerName: String, receiptNote: String) -> Unit,
+    onProcessPayment: (method: PaymentMethod, cashPaid: Double, splitMethod2: String, splitAmt1: Double, splitAmt2: Double, customerName: String, receiptNote: String, shippingAddress: String, courier: String, shippingFee: Double) -> Unit,
     onDismiss: () -> Unit
 ) {
     PaymentCheckoutBottomSheet(

@@ -65,6 +65,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.example.data.local.AuthPreferences
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Language
+import androidx.compose.material.icons.filled.LocalShipping
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
+import com.example.data.model.BusinessType
 import com.example.data.model.StoreProfile
 import com.example.ui.theme.CrispWhite
 import com.example.ui.theme.DarkSlate
@@ -83,12 +90,23 @@ fun StoreProfileSetupScreen(
 ) {
     val context = LocalContext.current
 
+    var businessType by remember { mutableStateOf(authPreferences.businessType) }
     var storeName by remember { mutableStateOf(authPreferences.storeName) }
+    var onlineStoreLink by remember { mutableStateOf(authPreferences.onlineStoreLink) }
+    var defaultCourier by remember { mutableStateOf(authPreferences.defaultCourier.ifBlank { "J&T Express" }) }
     var storeAddress by remember { mutableStateOf(authPreferences.storeAddress) }
     var storePhone by remember { mutableStateOf(authPreferences.storePhone) }
     var storeLogoUri by remember { mutableStateOf(authPreferences.storeLogoUri) }
     var storeQrisUri by remember { mutableStateOf(authPreferences.storeQrisImageUri) }
-    var receiptFooter by remember { mutableStateOf("Terima kasih atas kunjungan Anda!\nBarang yang sudah dibeli tidak dapat ditukar.") }
+    var receiptFooter by remember {
+        mutableStateOf(
+            if (authPreferences.businessType == BusinessType.ONLINE) {
+                "Terima kasih telah berbelanja online!\nMohon videokan saat membuka paket unboxing."
+            } else {
+                "Terima kasih atas kunjungan Anda!\nBarang yang sudah dibeli tidak dapat ditukar."
+            }
+        )
+    }
     var errorMessage by remember { mutableStateOf<String?>(null) }
 
     // Camera launcher for taking logo photo
@@ -406,7 +424,137 @@ fun StoreProfileSetupScreen(
                         color = DarkSlate
                     )
 
-                    Spacer(modifier = Modifier.height(14.dp))
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    // OPSI JENIS USAHA DI SETUP PROFIL
+                    Text(
+                        text = "Tipe Usaha:",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = DarkSlate
+                    )
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        val isOffline = businessType == BusinessType.OFFLINE
+                        Card(
+                            onClick = {
+                                businessType = BusinessType.OFFLINE
+                                receiptFooter = "Terima kasih atas kunjungan Anda!\nBarang yang sudah dibeli tidak dapat ditukar."
+                            },
+                            modifier = Modifier
+                                .weight(1f)
+                                .border(
+                                    width = if (isOffline) 2.dp else 1.dp,
+                                    color = if (isOffline) DeepRoyalBlue else Color(0xFFCBD5E1),
+                                    shape = RoundedCornerShape(10.dp)
+                                ),
+                            colors = CardDefaults.cardColors(
+                                containerColor = if (isOffline) Color(0xFFEFF6FF) else CrispWhite
+                            ),
+                            shape = RoundedCornerShape(10.dp)
+                        ) {
+                            Column(modifier = Modifier.padding(10.dp)) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Icon(Icons.Default.Storefront, contentDescription = null, tint = if (isOffline) DeepRoyalBlue else Color(0xFF64748B), modifier = Modifier.size(20.dp))
+                                    if (isOffline) Icon(Icons.Default.Check, contentDescription = null, tint = DeepRoyalBlue, modifier = Modifier.size(16.dp))
+                                }
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text("Usaha Offline", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = if (isOffline) DeepRoyalBlue else DarkSlate)
+                                Text("Toko fisik & kasir langsung", fontSize = 10.sp, color = Color(0xFF64748B))
+                            }
+                        }
+
+                        val isOnline = businessType == BusinessType.ONLINE
+                        Card(
+                            onClick = {
+                                businessType = BusinessType.ONLINE
+                                receiptFooter = "Terima kasih telah berbelanja online!\nMohon videokan saat membuka paket unboxing."
+                            },
+                            modifier = Modifier
+                                .weight(1f)
+                                .border(
+                                    width = if (isOnline) 2.dp else 1.dp,
+                                    color = if (isOnline) EmeraldGreen else Color(0xFFCBD5E1),
+                                    shape = RoundedCornerShape(10.dp)
+                                ),
+                            colors = CardDefaults.cardColors(
+                                containerColor = if (isOnline) Color(0xFFECFDF5) else CrispWhite
+                            ),
+                            shape = RoundedCornerShape(10.dp)
+                        ) {
+                            Column(modifier = Modifier.padding(10.dp)) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Icon(Icons.Default.Language, contentDescription = null, tint = if (isOnline) EmeraldGreen else Color(0xFF64748B), modifier = Modifier.size(20.dp))
+                                    if (isOnline) Icon(Icons.Default.Check, contentDescription = null, tint = EmeraldGreen, modifier = Modifier.size(16.dp))
+                                }
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text("Usaha Online", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = if (isOnline) EmeraldGreen else DarkSlate)
+                                Text("Olshop & ekspedisi kurir", fontSize = 10.sp, color = Color(0xFF64748B))
+                            }
+                        }
+                    }
+
+                    if (businessType == BusinessType.ONLINE) {
+                        Spacer(modifier = Modifier.height(10.dp))
+                        Text(
+                            text = "Pilih Kurir Utama:",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = DarkSlate
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        val couriers = listOf("J&T Express", "JNE", "SiCepat", "GoSend", "GrabExpress", "Anteraja", "Shopee Xpress")
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .horizontalScroll(rememberScrollState()),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            couriers.forEach { cr ->
+                                val isSelected = defaultCourier == cr
+                                FilterChip(
+                                    selected = isSelected,
+                                    onClick = { defaultCourier = cr },
+                                    label = { Text(cr, fontSize = 10.sp) },
+                                    leadingIcon = {
+                                        if (isSelected) {
+                                            Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(12.dp))
+                                        }
+                                    },
+                                    colors = FilterChipDefaults.filterChipColors(
+                                        selectedContainerColor = EmeraldGreen,
+                                        selectedLabelColor = CrispWhite,
+                                        containerColor = CrispWhite
+                                    )
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(8.dp))
+                        OutlinedTextField(
+                            value = onlineStoreLink,
+                            onValueChange = { onlineStoreLink = it },
+                            label = { Text("Link Toko Online / Instagram") },
+                            placeholder = { Text("Contoh: @olshop.id") },
+                            leadingIcon = { Icon(Icons.Default.Language, contentDescription = null, tint = EmeraldGreen) },
+                            singleLine = true,
+                            shape = RoundedCornerShape(10.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
 
                     // Store Name Field
                     OutlinedTextField(
@@ -415,7 +563,7 @@ fun StoreProfileSetupScreen(
                             storeName = it
                             errorMessage = null
                         },
-                        label = { Text("Nama Toko / Bisnis") },
+                        label = { Text(if (businessType == BusinessType.ONLINE) "Nama Toko Online / Olshop" else "Nama Toko / Bisnis") },
                         leadingIcon = { Icon(Icons.Default.Storefront, contentDescription = null, tint = VibrantBlue) },
                         singleLine = true,
                         shape = RoundedCornerShape(10.dp),
@@ -515,15 +663,22 @@ fun StoreProfileSetupScreen(
                                 address = trimmedAddr,
                                 phone = trimmedPhone,
                                 logoUri = storeLogoUri,
-                                qrisUri = storeQrisUri
+                                qrisUri = storeQrisUri,
+                                type = businessType,
+                                onlineLink = onlineStoreLink,
+                                courier = defaultCourier
                             )
 
                             val profile = StoreProfile(
                                 storeName = trimmedName,
+                                businessType = businessType,
+                                onlineStoreLink = onlineStoreLink,
+                                defaultCourier = defaultCourier,
                                 address = trimmedAddr,
                                 phone = trimmedPhone,
                                 logoUri = storeLogoUri,
                                 qrisImageUri = storeQrisUri,
+                                receiptHeader = if (businessType == BusinessType.ONLINE) "INVOICE / NOTA PESANAN ONLINE" else "STRUK PEMBELIAN RESMI",
                                 receiptFooter = receiptFooter
                             )
                             onProfileSaved(profile)

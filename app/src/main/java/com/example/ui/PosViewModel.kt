@@ -5,6 +5,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.data.local.AppDatabase
 import com.example.data.local.AuthPreferences
+import com.example.data.model.BusinessType
 import com.example.data.model.CartItem
 import com.example.data.model.Customer
 import com.example.data.model.CustomerDebt
@@ -254,12 +255,27 @@ class PosViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    // ONLINE SHIPPING STATE
+    private val _onlineShippingAddress = MutableStateFlow("")
+    val onlineShippingAddress: StateFlow<String> = _onlineShippingAddress.asStateFlow()
+    fun setOnlineShippingAddress(addr: String) { _onlineShippingAddress.value = addr }
+
+    private val _onlineCourier = MutableStateFlow("J&T Express")
+    val onlineCourier: StateFlow<String> = _onlineCourier.asStateFlow()
+    fun setOnlineCourier(c: String) { _onlineCourier.value = c }
+
+    private val _onlineShippingFee = MutableStateFlow(0.0)
+    val onlineShippingFee: StateFlow<Double> = _onlineShippingFee.asStateFlow()
+    fun setOnlineShippingFee(fee: Double) { _onlineShippingFee.value = fee.coerceAtLeast(0.0) }
+
     fun clearCart() {
         _cartItems.value = emptyList()
         _selectedCustomer.value = null
         _redeemedPoints.value = 0
         _transactionDiscountPercent.value = 0.0
         _transactionNote.value = ""
+        _onlineShippingAddress.value = ""
+        _onlineShippingFee.value = 0.0
     }
 
     fun selectCustomer(customer: Customer?) {
@@ -334,20 +350,27 @@ class PosViewModel(application: Application) : AndroidViewModel(application) {
         splitAmt1: Double = 0.0,
         splitAmt2: Double = 0.0,
         customerName: String = "",
-        receiptNote: String = ""
+        receiptNote: String = "",
+        shippingAddress: String = _onlineShippingAddress.value,
+        courier: String = _onlineCourier.value,
+        shippingFee: Double = _onlineShippingFee.value
     ) {
-        val grandTotal = cartGrandTotal
+        val isOnline = _storeProfile.value.businessType == BusinessType.ONLINE
+        val actualShippingFee = if (isOnline) shippingFee.coerceAtLeast(0.0) else 0.0
+        val grandTotal = cartGrandTotal + actualShippingFee
         val change = if (method == PaymentMethod.CASH) (cashPaid - grandTotal).coerceAtLeast(0.0) else 0.0
         val orderId = "ORD-" + System.currentTimeMillis().toString().takeLast(8)
-        val activeShift = shifts.value.find { it.status == "OPEN" }
-        val finalCustName = customerName.trim().ifBlank { _selectedCustomer.value?.name ?: "Pelanggan Walk-In" }
+        val activeShift = if (isOnline) null else shifts.value.find { it.status == "OPEN" }
+        val finalCustName = customerName.trim().ifBlank {
+            _selectedCustomer.value?.name ?: if (isOnline) "Pelanggan Online" else "Pelanggan Walk-In"
+        }
         val finalNote = if (receiptNote.isNotBlank()) receiptNote else _transactionNote.value
 
         val order = OrderEntity(
             orderId = orderId,
             timestamp = System.currentTimeMillis(),
-            cashierName = _currentUser.value.name,
-            cashierRole = _currentUser.value.role.label,
+            cashierName = if (isOnline) _currentUser.value.name.ifBlank { "Admin Online" } else _currentUser.value.name,
+            cashierRole = if (isOnline) "Admin Online" else _currentUser.value.role.label,
             shiftName = activeShift?.let { "${it.shiftScheduleName} (${it.shiftScheduleTime})" } ?: "",
             shiftId = activeShift?.id ?: 0L,
             customerId = _selectedCustomer.value?.id,
@@ -368,7 +391,10 @@ class PosViewModel(application: Application) : AndroidViewModel(application) {
             splitAmount2 = splitAmt2,
             orderNote = finalNote,
             status = OrderStatus.COMPLETED.name,
-            itemsJson = PosRepository.serializeItems(_cartItems.value)
+            itemsJson = PosRepository.serializeItems(_cartItems.value),
+            shippingAddress = if (isOnline) shippingAddress else "",
+            courier = if (isOnline) courier.ifBlank { _storeProfile.value.defaultCourier } else "",
+            shippingFee = actualShippingFee
         )
 
         val itemsToKeep = _cartItems.value.toList()

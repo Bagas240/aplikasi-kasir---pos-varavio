@@ -37,7 +37,9 @@ import androidx.compose.material.icons.filled.Inventory2
 import androidx.compose.material.icons.filled.People
 import androidx.compose.material.icons.filled.PointOfSale
 import androidx.compose.material.icons.filled.QrCode
+import androidx.compose.material.icons.filled.ReceiptLong
 import androidx.compose.material.icons.filled.ShoppingBag
+import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material.icons.filled.Store
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -75,6 +77,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.data.local.AuthPreferences
 import com.example.data.local.OnboardingPhase
+import com.example.data.model.BusinessType
 import com.example.data.model.StaffUser
 import com.example.data.model.UserRole
 import com.example.ui.PosTab
@@ -227,15 +230,32 @@ fun PosMasterApp(viewModel: PosViewModel = viewModel()) {
             )
         }
         OnboardingPhase.COMPLETED -> {
-            val navItems = remember {
-                listOf(
-                    Triple(PosTab.CASHIER, "Kasir", Icons.Default.PointOfSale),
-                    Triple(PosTab.BARCODE_ENGINE, "Barcode", Icons.Default.QrCode),
-                    Triple(PosTab.CATALOG, "Produk", Icons.Default.ShoppingBag),
-                    Triple(PosTab.INVENTORY, "Stok", Icons.Default.Inventory2),
-                    Triple(PosTab.SHIFT, "Shift", Icons.Default.AccountBalanceWallet),
-                    Triple(PosTab.ANALYTICS, "Laporan", Icons.Default.Assessment)
-                )
+            val isOnline = storeProfile.businessType == BusinessType.ONLINE
+            LaunchedEffect(isOnline) {
+                if (isOnline && currentTab == PosTab.SHIFT) {
+                    viewModel.setTab(PosTab.CASHIER)
+                }
+            }
+
+            val navItems = remember(isOnline) {
+                if (isOnline) {
+                    listOf(
+                        Triple(PosTab.CASHIER, "Pesanan", Icons.Default.ShoppingCart),
+                        Triple(PosTab.BARCODE_ENGINE, "Resi & Scan", Icons.Default.QrCode),
+                        Triple(PosTab.CATALOG, "Produk", Icons.Default.ShoppingBag),
+                        Triple(PosTab.INVENTORY, "Stok", Icons.Default.Inventory2),
+                        Triple(PosTab.ANALYTICS, "Laporan", Icons.Default.Assessment)
+                    )
+                } else {
+                    listOf(
+                        Triple(PosTab.CASHIER, "Kasir", Icons.Default.PointOfSale),
+                        Triple(PosTab.BARCODE_ENGINE, "Barcode", Icons.Default.QrCode),
+                        Triple(PosTab.CATALOG, "Produk", Icons.Default.ShoppingBag),
+                        Triple(PosTab.INVENTORY, "Stok", Icons.Default.Inventory2),
+                        Triple(PosTab.SHIFT, "Shift", Icons.Default.AccountBalanceWallet),
+                        Triple(PosTab.ANALYTICS, "Laporan", Icons.Default.Assessment)
+                    )
+                }
             }
 
             if (isTabletOrLandscape) {
@@ -329,7 +349,7 @@ fun PosMasterApp(viewModel: PosViewModel = viewModel()) {
                                     VoravioLogo(size = 26.dp, onDarkBackground = true)
                                     Spacer(modifier = Modifier.width(8.dp))
                                     Text(
-                                        text = "Voravio POS",
+                                        text = if (isOnline) "Voravio Olshop" else "Voravio POS",
                                         fontWeight = FontWeight.ExtraBold,
                                         fontSize = 15.sp,
                                         color = CrispWhite
@@ -347,13 +367,13 @@ fun PosMasterApp(viewModel: PosViewModel = viewModel()) {
                                         modifier = Modifier
                                             .size(7.dp)
                                             .background(
-                                                if (activeShift != null) EmeraldGreen else Color(0xFFF87171),
+                                                if (isOnline || activeShift != null) EmeraldGreen else Color(0xFFF87171),
                                                 CircleShape
                                             )
                                     )
                                     Spacer(modifier = Modifier.width(5.dp))
                                     Text(
-                                        text = if (activeShift != null) "Shift Aktif" else "Shift Tutup",
+                                        text = if (isOnline) "Mode Online Aktif" else if (activeShift != null) "Shift Aktif" else "Shift Tutup",
                                         fontSize = 11.sp,
                                         color = CrispWhite.copy(alpha = 0.9f)
                                     )
@@ -434,7 +454,7 @@ fun PosMasterApp(viewModel: PosViewModel = viewModel()) {
                                         Column {
                                             Row(verticalAlignment = Alignment.CenterVertically) {
                                                 Text(
-                                                    text = "Voravio POS",
+                                                    text = if (isOnline) "ORDER ONLINE" else "Voravio POS",
                                                     fontWeight = FontWeight.ExtraBold,
                                                     fontSize = 16.sp,
                                                     color = CrispWhite
@@ -453,13 +473,13 @@ fun PosMasterApp(viewModel: PosViewModel = viewModel()) {
                                                     modifier = Modifier
                                                         .size(7.dp)
                                                         .background(
-                                                            if (activeShift != null) EmeraldGreen else Color(0xFFF87171),
+                                                            if (isOnline || activeShift != null) EmeraldGreen else Color(0xFFF87171),
                                                             CircleShape
                                                         )
                                                 )
                                                 Spacer(modifier = Modifier.width(5.dp))
                                                 Text(
-                                                    text = if (activeShift != null) "Shift: ${activeShift.cashierName}" else "Shift: Kasir Tutup",
+                                                    text = if (isOnline) "Mode Online Aktif" else if (activeShift != null) "Shift: ${activeShift.cashierName}" else "Shift: Kasir Tutup",
                                                     fontSize = 11.sp,
                                                     color = CrispWhite.copy(alpha = 0.85f)
                                                 )

@@ -2,6 +2,7 @@ package com.example.util
 
 import android.content.Context
 import android.content.Intent
+import com.example.data.model.BusinessType
 import com.example.data.model.CartItem
 import com.example.data.model.OrderEntity
 import com.example.data.model.StoreProfile
@@ -61,21 +62,52 @@ object EscPosPrinterHelper {
             return if (space > 0) left + " ".repeat(space) + right else "$left $right"
         }
 
+        val isOnline = store.businessType == BusinessType.ONLINE
+
         sb.appendLine(doubleLine())
         sb.appendLine(center(store.storeName))
-        sb.appendLine(center(store.address))
-        sb.appendLine(center("Telp: ${store.phone}"))
-        if (store.instagram.isNotBlank()) sb.appendLine(center(store.instagram))
+        if (isOnline) {
+            sb.appendLine(center("INVOICE / NOTA PESANAN ONLINE"))
+            if (store.onlineStoreLink.isNotBlank()) sb.appendLine(center("Web: ${store.onlineStoreLink}"))
+            if (store.instagram.isNotBlank()) sb.appendLine(center("IG: ${store.instagram}"))
+            if (store.phone.isNotBlank()) sb.appendLine(center("WA: ${store.phone}"))
+        } else {
+            if (store.address.isNotBlank()) sb.appendLine(center(store.address))
+            if (store.phone.isNotBlank()) sb.appendLine(center("Telp: ${store.phone}"))
+            if (store.instagram.isNotBlank()) sb.appendLine(center(store.instagram))
+        }
         sb.appendLine(doubleLine())
 
-        sb.appendLine(twoCols("No. Struk :", order.orderId))
-        sb.appendLine(twoCols("Waktu     :", CurrencyFormatter.formatDate(order.timestamp)))
-        val cashierInfo = if (order.cashierRole.isNotBlank()) "${order.cashierName} (${order.cashierRole})" else order.cashierName
-        sb.appendLine(twoCols("Kasir     :", cashierInfo))
-        if (order.shiftName.isNotBlank()) {
-            sb.appendLine(twoCols("Shift     :", order.shiftName))
+        if (isOnline) {
+            // ONLINE SHOP: No physical cashier or cashier shift
+            sb.appendLine(twoCols("No. Pesanan :", order.orderId))
+            sb.appendLine(twoCols("Waktu Order :", CurrencyFormatter.formatDate(order.timestamp)))
+            sb.appendLine(twoCols("Admin Olshop:", order.cashierName.ifBlank { "Admin Toko" }))
+            sb.appendLine(twoCols("Penerima    :", order.customerName))
+            if (order.customerPhone.isNotBlank()) {
+                sb.appendLine(twoCols("No. WA/Telp :", order.customerPhone))
+            }
+            val courierName = if (order.courier.isNotBlank()) order.courier else store.defaultCourier
+            if (courierName.isNotBlank()) {
+                sb.appendLine(twoCols("Ekspedisi   :", courierName))
+            }
+            if (order.shippingAddress.isNotBlank()) {
+                sb.appendLine("Alamat Kirim:")
+                wrapText(order.shippingAddress).forEach { wrapped ->
+                    sb.appendLine("  $wrapped")
+                }
+            }
+        } else {
+            // OFFLINE STORE: Physical cashier & shift
+            sb.appendLine(twoCols("No. Struk :", order.orderId))
+            sb.appendLine(twoCols("Waktu     :", CurrencyFormatter.formatDate(order.timestamp)))
+            val cashierInfo = if (order.cashierRole.isNotBlank()) "${order.cashierName} (${order.cashierRole})" else order.cashierName
+            sb.appendLine(twoCols("Kasir     :", cashierInfo))
+            if (order.shiftName.isNotBlank()) {
+                sb.appendLine(twoCols("Shift     :", order.shiftName))
+            }
+            sb.appendLine(twoCols("Pelanggan :", order.customerName))
         }
-        sb.appendLine(twoCols("Pelanggan :", order.customerName))
         sb.appendLine(line())
 
         items.forEach { item ->
@@ -92,7 +124,10 @@ object EscPosPrinterHelper {
         }
 
         sb.appendLine(line())
-        sb.appendLine(twoCols("Subtotal", CurrencyFormatter.formatRupiah(order.subtotal)))
+        sb.appendLine(twoCols("Subtotal Produk", CurrencyFormatter.formatRupiah(order.subtotal)))
+        if (order.shippingFee > 0) {
+            sb.appendLine(twoCols("Ongkos Kirim", CurrencyFormatter.formatRupiah(order.shippingFee)))
+        }
         if (order.discountTotal > 0) {
             sb.appendLine(twoCols("Total Diskon", "-${CurrencyFormatter.formatRupiah(order.discountTotal)}"))
         }
@@ -103,7 +138,7 @@ object EscPosPrinterHelper {
             sb.appendLine(twoCols("Service (${order.servicePercent.toInt()}%)", CurrencyFormatter.formatRupiah(order.serviceAmount)))
         }
         sb.appendLine(doubleLine())
-        sb.appendLine(twoCols("TOTAL", CurrencyFormatter.formatRupiah(order.grandTotal)))
+        sb.appendLine(twoCols("TOTAL BAYAR", CurrencyFormatter.formatRupiah(order.grandTotal)))
         sb.appendLine(twoCols("Metode Bayar", order.paymentMethod))
 
         if (order.cashReceived > 0) {
@@ -121,7 +156,8 @@ object EscPosPrinterHelper {
         // Custom Personalized Message for Customer
         val effectiveNote = if (customReceiptNote.isNotBlank()) customReceiptNote else order.orderNote
         if (effectiveNote.isNotBlank()) {
-            sb.appendLine(center("💌 PESAN UNTUK PELANGGAN 💌"))
+            val messageHeader = if (isOnline) "💌 PESAN HANGAT UNTUK PEMBELI 💌" else "💌 PESAN UNTUK PELANGGAN 💌"
+            sb.appendLine(center(messageHeader))
             effectiveNote.lines().forEach { noteLine ->
                 val trimmed = noteLine.trim()
                 if (trimmed.isNotBlank()) {
@@ -133,7 +169,15 @@ object EscPosPrinterHelper {
             sb.appendLine(line())
         }
 
-        store.receiptFooter.lines().forEach { footLine ->
+        val effectiveFooter = if (store.receiptFooter.isNotBlank()) {
+            store.receiptFooter
+        } else if (isOnline) {
+            "Terima kasih telah berbelanja online!\nMohon video unboxing saat buka paket ya kak 🙏"
+        } else {
+            "Terima kasih atas kunjungan Anda!\nBarang yang sudah dibeli tidak dapat ditukar."
+        }
+
+        effectiveFooter.lines().forEach { footLine ->
             sb.appendLine(center(footLine.trim()))
         }
         sb.appendLine(doubleLine())

@@ -58,6 +58,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.DialogProperties
+import com.example.data.model.BusinessType
 import com.example.data.model.CartItem
 import com.example.data.model.OrderEntity
 import com.example.data.model.StoreProfile
@@ -96,14 +97,26 @@ fun ThermalReceiptDialog(
         )
     }
 
-    val quickTemplates = remember(store.storeName, store.instagram) {
-        listOf(
-            "Terima kasih banyak, semoga harinya menyenangkan! 😊",
-            "Selamat menikmati! Ditunggu kedatangannya kembali ya ✨",
-            "Tunjukkan struk ini untuk diskon 10% di kunjungan berikutnya! 🎉",
-            if (store.instagram.isNotBlank()) "Tag foto belanjaanmu ke IG ${store.instagram}! ⭐" else "Terima kasih sudah berbelanja di toko kami! ❤️",
-            "Senang melayani Anda hari ini! Sehat dan sukses selalu ya 🙏"
-        )
+    val isOnline = store.businessType == BusinessType.ONLINE
+
+    val quickTemplates = remember(store.storeName, store.instagram, isOnline) {
+        if (isOnline) {
+            listOf(
+                "📦 Terima kasih sudah order di toko kami! Paket segera dikirim, mohon video unboxing ya kak ✨",
+                "💖 Semoga suka dengan pesanannya! Ditunggu repeat order berikutnya kak~",
+                "🚚 Paket dikemas dengan bubble wrap aman & rapi. Selamat sampai tujuan!",
+                "⭐ Jangan lupa review bintang 5 dan tag IG kami ya! Terima kasih banyak ❤️",
+                "🎁 Ada bonus spesial di dalam paket! Terima kasih telah mendukung olshop kami 🙏"
+            )
+        } else {
+            listOf(
+                "Terima kasih banyak, semoga harinya menyenangkan! 😊",
+                "Selamat menikmati! Ditunggu kedatangannya kembali ya ✨",
+                "Tunjukkan struk ini untuk diskon 10% di kunjungan berikutnya! 🎉",
+                if (store.instagram.isNotBlank()) "Tag foto belanjaanmu ke IG ${store.instagram}! ⭐" else "Terima kasih sudah berbelanja di toko kami! ❤️",
+                "Senang melayani Anda hari ini! Sehat dan sukses selalu ya 🙏"
+            )
+        }
     }
 
     AlertDialog(
@@ -145,13 +158,17 @@ fun ThermalReceiptDialog(
                         Spacer(modifier = Modifier.width(10.dp))
                         Column {
                             Text(
-                                text = "Transaksi Berhasil!",
+                                text = if (isOnline) "Pesanan Online Siap!" else "Transaksi Berhasil!",
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 16.sp,
                                 color = DarkSlate
                             )
                             Text(
-                                text = "No: ${order.orderId} • ${order.customerName}",
+                                text = if (isOnline) {
+                                    "No: ${order.orderId} • Penerima: ${order.customerName}"
+                                } else {
+                                    "No: ${order.orderId} • ${order.customerName}"
+                                },
                                 fontSize = 11.sp,
                                 color = Color(0xFF64748B)
                             )
@@ -187,7 +204,7 @@ fun ThermalReceiptDialog(
                                 )
                                 Spacer(modifier = Modifier.width(6.dp))
                                 Text(
-                                    text = "Pesan Khusus di Struk",
+                                    text = if (isOnline) "Pesan Khusus di Invoice / Label" else "Pesan Khusus di Struk",
                                     fontWeight = FontWeight.Bold,
                                     fontSize = 13.sp,
                                     color = DeepRoyalBlue
@@ -208,7 +225,11 @@ fun ThermalReceiptDialog(
                         }
 
                         Text(
-                            text = "Ketik pesan hangat, sapaan personal, atau info promo agar hubungan dengan customer semakin dekat:",
+                            text = if (isOnline) {
+                                "Ketik pesan hangat, ucapan terima kasih paket, atau instruksi unboxing untuk pembeli online:"
+                            } else {
+                                "Ketik pesan hangat, sapaan personal, atau info promo agar hubungan dengan customer semakin dekat:"
+                            },
                             fontSize = 11.sp,
                             color = Color(0xFF475569),
                             modifier = Modifier.padding(top = 4.dp, bottom = 8.dp)
@@ -222,7 +243,11 @@ fun ThermalReceiptDialog(
                             },
                             placeholder = {
                                 Text(
-                                    "Ketik pesan bebas di sini (misal: Terima kasih Kak Sarah, semoga harinya menyenangkan! ❤️)",
+                                    if (isOnline) {
+                                        "Ketik pesan bebas di sini (misal: Terima kasih Kak Sarah, paket segera meluncur! Ditunggu bintang 5 ya ❤️)"
+                                    } else {
+                                        "Ketik pesan bebas di sini (misal: Terima kasih Kak Sarah, semoga harinya menyenangkan! ❤️)"
+                                    },
                                     fontSize = 12.sp,
                                     color = Color(0xFF94A3B8)
                                 )

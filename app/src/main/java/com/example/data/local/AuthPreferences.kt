@@ -2,6 +2,7 @@ package com.example.data.local
 
 import android.content.Context
 import android.content.SharedPreferences
+import com.example.data.model.BusinessType
 import com.example.data.model.StaffUser
 import com.example.data.model.StoreProfile
 import com.example.data.model.UserRole
@@ -29,6 +30,9 @@ class AuthPreferences(context: Context) {
         private const val KEY_AUTH_PIN = "key_auth_pin"
 
         private const val KEY_STORE_NAME = "key_store_name"
+        private const val KEY_BUSINESS_TYPE = "key_business_type"
+        private const val KEY_ONLINE_STORE_LINK = "key_online_store_link"
+        private const val KEY_DEFAULT_COURIER = "key_default_courier"
         private const val KEY_STORE_ADDRESS = "key_store_address"
         private const val KEY_STORE_PHONE = "key_store_phone"
         private const val KEY_STORE_LOGO = "key_store_logo"
@@ -80,6 +84,25 @@ class AuthPreferences(context: Context) {
         get() = prefs.getString(KEY_STORE_NAME, "") ?: ""
         set(value) = prefs.edit().putString(KEY_STORE_NAME, value).apply()
 
+    var businessType: BusinessType
+        get() {
+            val raw = prefs.getString(KEY_BUSINESS_TYPE, BusinessType.OFFLINE.name)
+            return try {
+                BusinessType.valueOf(raw ?: BusinessType.OFFLINE.name)
+            } catch (e: Exception) {
+                BusinessType.OFFLINE
+            }
+        }
+        set(value) = prefs.edit().putString(KEY_BUSINESS_TYPE, value.name).apply()
+
+    var onlineStoreLink: String
+        get() = prefs.getString(KEY_ONLINE_STORE_LINK, "") ?: ""
+        set(value) = prefs.edit().putString(KEY_ONLINE_STORE_LINK, value).apply()
+
+    var defaultCourier: String
+        get() = prefs.getString(KEY_DEFAULT_COURIER, "J&T Express") ?: "J&T Express"
+        set(value) = prefs.edit().putString(KEY_DEFAULT_COURIER, value).apply()
+
     var storeAddress: String
         get() = prefs.getString(KEY_STORE_ADDRESS, "") ?: ""
         set(value) = prefs.edit().putString(KEY_STORE_ADDRESS, value).apply()
@@ -100,12 +123,22 @@ class AuthPreferences(context: Context) {
         get() = prefs.getBoolean(KEY_TUTORIAL_COMPLETED, false)
         set(value) = prefs.edit().putBoolean(KEY_TUTORIAL_COMPLETED, value).apply()
 
-    fun setupInitialAccountAndStore(store: String, user: String, userPin: String) {
+    fun setupInitialAccountAndStore(
+        store: String,
+        user: String,
+        userPin: String,
+        type: BusinessType = BusinessType.OFFLINE,
+        onlineLink: String = "",
+        courier: String = "J&T Express"
+    ) {
         val sName = store.trim()
         val uName = user.trim()
         val pCode = userPin.trim()
         prefs.edit()
             .putString(KEY_STORE_NAME, sName)
+            .putString(KEY_BUSINESS_TYPE, type.name)
+            .putString(KEY_ONLINE_STORE_LINK, onlineLink.trim())
+            .putString(KEY_DEFAULT_COURIER, courier.trim())
             .putString(KEY_AUTH_USERNAME, uName)
             .putString(KEY_AUTH_FULL_NAME, uName)
             .putString(KEY_AUTH_PIN, pCode)
@@ -136,13 +169,25 @@ class AuthPreferences(context: Context) {
             .apply()
     }
 
-    fun saveStoreProfile(name: String, address: String, phone: String, logoUri: String?, qrisUri: String? = null) {
+    fun saveStoreProfile(
+        name: String,
+        address: String,
+        phone: String,
+        logoUri: String?,
+        qrisUri: String? = null,
+        type: BusinessType = BusinessType.OFFLINE,
+        onlineLink: String = "",
+        courier: String = "J&T Express"
+    ) {
         prefs.edit()
             .putString(KEY_STORE_NAME, name)
             .putString(KEY_STORE_ADDRESS, address)
             .putString(KEY_STORE_PHONE, phone)
             .putString(KEY_STORE_LOGO, logoUri)
             .putString(KEY_STORE_QRIS, qrisUri)
+            .putString(KEY_BUSINESS_TYPE, type.name)
+            .putString(KEY_ONLINE_STORE_LINK, onlineLink)
+            .putString(KEY_DEFAULT_COURIER, courier)
             .apply()
     }
 
@@ -156,12 +201,18 @@ class AuthPreferences(context: Context) {
     }
 
     fun getStoreProfile(): StoreProfile {
+        val isOnline = businessType == BusinessType.ONLINE
         return StoreProfile(
             storeName = storeName,
+            businessType = businessType,
+            onlineStoreLink = onlineStoreLink,
+            defaultCourier = defaultCourier,
             address = storeAddress,
             phone = storePhone,
             logoUri = storeLogoUri,
-            qrisImageUri = storeQrisImageUri
+            qrisImageUri = storeQrisImageUri,
+            receiptHeader = if (isOnline) "INVOICE / NOTA PESANAN ONLINE" else "STRUK PEMBELIAN RESMI",
+            receiptFooter = if (isOnline) "Terima kasih telah berbelanja online!\nMohon videokan saat membuka paket unboxing." else "Terima kasih atas kunjungan Anda!\nBarang yang sudah dibeli tidak dapat ditukar."
         )
     }
 

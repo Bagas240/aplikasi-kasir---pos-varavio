@@ -24,6 +24,7 @@ import android.print.pdf.PrintedPdfDocument
 import android.provider.MediaStore
 import android.widget.Toast
 import androidx.core.content.FileProvider
+import com.example.data.model.BusinessType
 import com.example.data.model.CartItem
 import com.example.data.model.OrderEntity
 import com.example.data.model.Product
@@ -249,27 +250,46 @@ object PosPrinterManager {
         var y = 30f
         val centerX = widthPx / 2f
 
+        val isOnline = store.businessType == BusinessType.ONLINE
+
         // 1. Store Header
         canvas.drawText(store.storeName.uppercase(), centerX, y, titlePaint)
         y += 20f
-        if (store.address.isNotBlank()) {
-            canvas.drawText(store.address, centerX, y, headerPaint)
+        if (isOnline) {
+            canvas.drawText("INVOICE / NOTA PESANAN ONLINE", centerX, y, headerPaint)
             y += 18f
-        }
-        if (store.phone.isNotBlank()) {
-            canvas.drawText("Telp: ${store.phone}", centerX, y, headerPaint)
-            y += 18f
-        }
-        if (store.instagram.isNotBlank()) {
-            canvas.drawText(store.instagram, centerX, y, headerPaint)
-            y += 18f
+            if (store.onlineStoreLink.isNotBlank()) {
+                canvas.drawText("Web: ${store.onlineStoreLink}", centerX, y, headerPaint)
+                y += 18f
+            }
+            if (store.instagram.isNotBlank()) {
+                canvas.drawText("IG: ${store.instagram}", centerX, y, headerPaint)
+                y += 18f
+            }
+            if (store.phone.isNotBlank()) {
+                canvas.drawText("WA: ${store.phone}", centerX, y, headerPaint)
+                y += 18f
+            }
+        } else {
+            if (store.address.isNotBlank()) {
+                canvas.drawText(store.address, centerX, y, headerPaint)
+                y += 18f
+            }
+            if (store.phone.isNotBlank()) {
+                canvas.drawText("Telp: ${store.phone}", centerX, y, headerPaint)
+                y += 18f
+            }
+            if (store.instagram.isNotBlank()) {
+                canvas.drawText(store.instagram, centerX, y, headerPaint)
+                y += 18f
+            }
         }
 
         y += 6f
         canvas.drawLine(padding.toFloat(), y, (widthPx - padding).toFloat(), y, linePaint)
         y += 18f
 
-        // 2. Metadata (Order ID, Waktu, Kasir, Pelanggan)
+        // 2. Metadata (Order ID, Waktu, Kasir/Admin, Pelanggan, Ekspedisi)
         fun drawTwoColumns(left: String, right: String, paint: Paint = textPaint) {
             canvas.drawText(left, padding.toFloat(), y, paint)
             val rightWidth = paint.measureText(right)
@@ -277,14 +297,32 @@ object PosPrinterManager {
             y += 18f
         }
 
-        drawTwoColumns("No. Struk :", order.orderId)
-        drawTwoColumns("Waktu     :", CurrencyFormatter.formatDate(order.timestamp))
-        val cashierInfo = if (order.cashierRole.isNotBlank()) "${order.cashierName} (${order.cashierRole})" else order.cashierName
-        drawTwoColumns("Kasir     :", cashierInfo)
-        if (order.shiftName.isNotBlank()) {
-            drawTwoColumns("Shift     :", order.shiftName)
+        if (isOnline) {
+            drawTwoColumns("No. Pesanan :", order.orderId)
+            drawTwoColumns("Waktu Order :", CurrencyFormatter.formatDate(order.timestamp))
+            drawTwoColumns("Admin Olshop:", order.cashierName.ifBlank { "Admin Toko" })
+            drawTwoColumns("Penerima    :", order.customerName)
+            if (order.customerPhone.isNotBlank()) {
+                drawTwoColumns("No. WA/Telp :", order.customerPhone)
+            }
+            val courierName = if (order.courier.isNotBlank()) order.courier else store.defaultCourier
+            if (courierName.isNotBlank()) {
+                drawTwoColumns("Ekspedisi   :", courierName)
+            }
+            if (order.shippingAddress.isNotBlank()) {
+                canvas.drawText("Alamat Kirim: ${order.shippingAddress.take(40)}", padding.toFloat(), y, textPaint)
+                y += 18f
+            }
+        } else {
+            drawTwoColumns("No. Struk :", order.orderId)
+            drawTwoColumns("Waktu     :", CurrencyFormatter.formatDate(order.timestamp))
+            val cashierInfo = if (order.cashierRole.isNotBlank()) "${order.cashierName} (${order.cashierRole})" else order.cashierName
+            drawTwoColumns("Kasir     :", cashierInfo)
+            if (order.shiftName.isNotBlank()) {
+                drawTwoColumns("Shift     :", order.shiftName)
+            }
+            drawTwoColumns("Pelanggan :", order.customerName)
         }
-        drawTwoColumns("Pelanggan :", order.customerName)
 
         y += 4f
         canvas.drawLine(padding.toFloat(), y, (widthPx - padding).toFloat(), y, linePaint)
@@ -311,7 +349,10 @@ object PosPrinterManager {
         y += 18f
 
         // 4. Totals
-        drawTwoColumns("Subtotal", CurrencyFormatter.formatRupiah(order.subtotal))
+        drawTwoColumns("Subtotal Produk", CurrencyFormatter.formatRupiah(order.subtotal))
+        if (order.shippingFee > 0) {
+            drawTwoColumns("Ongkos Kirim", CurrencyFormatter.formatRupiah(order.shippingFee))
+        }
         if (order.discountTotal > 0) {
             drawTwoColumns("Total Diskon", "-${CurrencyFormatter.formatRupiah(order.discountTotal)}")
         }
@@ -327,7 +368,7 @@ object PosPrinterManager {
         y += 22f
 
         // Grand Total Bold
-        canvas.drawText("TOTAL", padding.toFloat(), y, totalPaint)
+        canvas.drawText("TOTAL BAYAR", padding.toFloat(), y, totalPaint)
         val grandTotalStr = CurrencyFormatter.formatRupiah(order.grandTotal)
         val grandTotalWidth = totalPaint.measureText(grandTotalStr)
         canvas.drawText(grandTotalStr, (widthPx - padding - grandTotalWidth), y, totalPaint)
@@ -358,7 +399,8 @@ object PosPrinterManager {
                 textAlign = Paint.Align.CENTER
             }
 
-            canvas.drawText("💌 PESAN UNTUK PELANGGAN 💌", centerX, y, noteHeaderPaint)
+            val noteHeaderTitle = if (isOnline) "💌 PESAN HANGAT UNTUK PEMBELI 💌" else "💌 PESAN UNTUK PELANGGAN 💌"
+            canvas.drawText(noteHeaderTitle, centerX, y, noteHeaderPaint)
             y += 18f
             effectiveNote.lines().forEach { line ->
                 val trimmed = line.trim()
@@ -373,7 +415,15 @@ object PosPrinterManager {
         }
 
         // 6. Store Footer Notes
-        store.receiptFooter.lines().forEach { line ->
+        val effectiveFooter = if (store.receiptFooter.isNotBlank()) {
+            store.receiptFooter
+        } else if (isOnline) {
+            "Terima kasih telah berbelanja online!\nMohon video unboxing saat buka paket ya kak 🙏"
+        } else {
+            "Terima kasih atas kunjungan Anda!\nBarang yang sudah dibeli tidak dapat ditukar."
+        }
+
+        effectiveFooter.lines().forEach { line ->
             canvas.drawText(line.trim(), centerX, y, headerPaint)
             y += 16f
         }

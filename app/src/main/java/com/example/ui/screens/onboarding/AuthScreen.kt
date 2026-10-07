@@ -3,6 +3,7 @@ package com.example.ui.screens.onboarding
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -63,6 +64,14 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.local.AuthPreferences
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Language
+import androidx.compose.material.icons.filled.LocalShipping
+import androidx.compose.material.icons.filled.Store
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
+import androidx.compose.material3.Surface
+import com.example.data.model.BusinessType
 import com.example.data.model.UserRole
 import com.example.ui.theme.CrispWhite
 import com.example.ui.theme.DarkSlate
@@ -87,10 +96,13 @@ fun AuthScreen(
     var showLoginPin by remember { mutableStateOf(false) }
     var loginError by remember { mutableStateOf<String?>(null) }
 
-    // Quick Setup Form State (Nama Toko + Username + PIN)
+    // Quick Setup Form State (Nama Toko + Username + PIN + Jenis Usaha)
+    var setupBusinessType by remember { mutableStateOf(authPreferences.businessType) }
     var setupStoreName by remember { mutableStateOf(authPreferences.storeName) }
     var setupUsername by remember { mutableStateOf(authPreferences.username) }
     var setupPin by remember { mutableStateOf(if (hasExistingAccount) authPreferences.pin else "") }
+    var setupOnlineLink by remember { mutableStateOf(authPreferences.onlineStoreLink) }
+    var setupCourier by remember { mutableStateOf(authPreferences.defaultCourier.ifBlank { "J&T Express" }) }
     var showSetupPin by remember { mutableStateOf(false) }
     var setupError by remember { mutableStateOf<String?>(null) }
 
@@ -386,6 +398,229 @@ fun AuthScreen(
 
                         Spacer(modifier = Modifier.height(14.dp))
 
+                        // PILIH JENIS USAHA (OFFLINE VS ONLINE)
+                        Text(
+                            text = "Pilih Jenis Usaha Anda:",
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = DarkSlate
+                        )
+                        Text(
+                            text = "Aplikasi akan otomatis disesuaikan dengan alur operasional bisnis Anda",
+                            fontSize = 11.sp,
+                            color = Color(0xFF64748B)
+                        )
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            // Card Opsi Offline
+                            val isOfflineSelected = setupBusinessType == BusinessType.OFFLINE
+                            Card(
+                                onClick = { setupBusinessType = BusinessType.OFFLINE },
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .border(
+                                        width = if (isOfflineSelected) 2.dp else 1.dp,
+                                        color = if (isOfflineSelected) DeepRoyalBlue else Color(0xFFCBD5E1),
+                                        shape = RoundedCornerShape(12.dp)
+                                    )
+                                    .testTag("business_type_offline_card"),
+                                colors = CardDefaults.cardColors(
+                                    containerColor = if (isOfflineSelected) Color(0xFFEFF6FF) else CrispWhite
+                                ),
+                                shape = RoundedCornerShape(12.dp)
+                            ) {
+                                Column(modifier = Modifier.padding(12.dp)) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Icon(
+                                            Icons.Default.Storefront,
+                                            contentDescription = null,
+                                            tint = if (isOfflineSelected) DeepRoyalBlue else Color(0xFF64748B),
+                                            modifier = Modifier.size(24.dp)
+                                        )
+                                        if (isOfflineSelected) {
+                                            Icon(
+                                                Icons.Default.Check,
+                                                contentDescription = null,
+                                                tint = DeepRoyalBlue,
+                                                modifier = Modifier.size(16.dp)
+                                            )
+                                        }
+                                    }
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    Text(
+                                        text = "Usaha Offline",
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 13.sp,
+                                        color = if (isOfflineSelected) DeepRoyalBlue else DarkSlate
+                                    )
+                                    Text(
+                                        text = "Toko fisik, kasir langsung, shift kerja, laci kasir & cetak struk",
+                                        fontSize = 10.sp,
+                                        color = Color(0xFF64748B),
+                                        lineHeight = 13.sp
+                                    )
+                                }
+                            }
+
+                            // Card Opsi Online
+                            val isOnlineSelected = setupBusinessType == BusinessType.ONLINE
+                            Card(
+                                onClick = { setupBusinessType = BusinessType.ONLINE },
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .border(
+                                        width = if (isOnlineSelected) 2.dp else 1.dp,
+                                        color = if (isOnlineSelected) EmeraldGreen else Color(0xFFCBD5E1),
+                                        shape = RoundedCornerShape(12.dp)
+                                    )
+                                    .testTag("business_type_online_card"),
+                                colors = CardDefaults.cardColors(
+                                    containerColor = if (isOnlineSelected) Color(0xFFECFDF5) else CrispWhite
+                                ),
+                                shape = RoundedCornerShape(12.dp)
+                            ) {
+                                Column(modifier = Modifier.padding(12.dp)) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Icon(
+                                            Icons.Default.Language,
+                                            contentDescription = null,
+                                            tint = if (isOnlineSelected) EmeraldGreen else Color(0xFF64748B),
+                                            modifier = Modifier.size(24.dp)
+                                        )
+                                        if (isOnlineSelected) {
+                                            Icon(
+                                                Icons.Default.Check,
+                                                contentDescription = null,
+                                                tint = EmeraldGreen,
+                                                modifier = Modifier.size(16.dp)
+                                            )
+                                        }
+                                    }
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    Text(
+                                        text = "Usaha Online",
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 13.sp,
+                                        color = if (isOnlineSelected) EmeraldGreen else DarkSlate
+                                    )
+                                    Text(
+                                        text = "Online shop / olshop, resi ekspedisi, nota kiriman, tanpa kasir fisik & shift",
+                                        fontSize = 10.sp,
+                                        color = Color(0xFF64748B),
+                                        lineHeight = 13.sp
+                                    )
+                                }
+                            }
+                        }
+
+                        // Penjelasan spesifik jika memilih Usaha Online
+                        if (setupBusinessType == BusinessType.ONLINE) {
+                            Spacer(modifier = Modifier.height(10.dp))
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(Color(0xFFF0FDF4))
+                                    .border(1.dp, Color(0xFFA7F3D0), RoundedCornerShape(8.dp))
+                                    .padding(10.dp)
+                            ) {
+                                Column {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Icon(
+                                            imageVector = Icons.Default.LocalShipping,
+                                            contentDescription = null,
+                                            tint = EmeraldDark,
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        Text(
+                                            text = "Penyesuaian Khusus Usaha Online:",
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 11.sp,
+                                            color = EmeraldDark
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Text(
+                                        text = "• Bagian kasir fisik & shift ditiadakan (digantikan Pesanan & Order Masuk)\n• Struk disesuaikan menjadi Invoice Digital & Label Pengiriman dengan kurir & ongkir\n• Pesan khusus di struk dapat dicustom bebas untuk menyapa pembeli online",
+                                        fontSize = 10.sp,
+                                        color = Color(0xFF065F46),
+                                        lineHeight = 14.sp
+                                    )
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.height(10.dp))
+
+                            // Pilihan Kurir Ekspedisi Default
+                            Text(
+                                text = "Pilih Kurir Ekspedisi Utama:",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = DarkSlate
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            val couriers = listOf("J&T Express", "JNE", "SiCepat", "GoSend", "GrabExpress", "Anteraja", "Shopee Xpress")
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .horizontalScroll(rememberScrollState()),
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                couriers.forEach { cr ->
+                                    val isSelected = setupCourier == cr
+                                    FilterChip(
+                                        selected = isSelected,
+                                        onClick = { setupCourier = cr },
+                                        label = { Text(cr, fontSize = 10.sp) },
+                                        leadingIcon = {
+                                            if (isSelected) {
+                                                Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(12.dp))
+                                            }
+                                        },
+                                        colors = FilterChipDefaults.filterChipColors(
+                                            selectedContainerColor = EmeraldGreen,
+                                            selectedLabelColor = CrispWhite,
+                                            containerColor = CrispWhite
+                                        )
+                                    )
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.height(8.dp))
+
+                            // Link Toko Online / IG
+                            OutlinedTextField(
+                                value = setupOnlineLink,
+                                onValueChange = { setupOnlineLink = it },
+                                label = { Text("Link Toko Online / IG / WhatsApp (Opsional)") },
+                                placeholder = { Text("Contoh: @olshop.id atau https://tokoku.com") },
+                                leadingIcon = { Icon(Icons.Default.Language, contentDescription = null, tint = EmeraldGreen) },
+                                singleLine = true,
+                                shape = RoundedCornerShape(10.dp),
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedBorderColor = EmeraldGreen,
+                                    unfocusedBorderColor = Color(0xFFCBD5E1)
+                                )
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(14.dp))
+
                         // 1. Nama Toko
                         OutlinedTextField(
                             value = setupStoreName,
@@ -393,8 +628,8 @@ fun AuthScreen(
                                 setupStoreName = it
                                 setupError = null
                             },
-                            label = { Text("1. Nama Toko") },
-                            placeholder = { Text("Contoh: Voravio Mart") },
+                            label = { Text(if (setupBusinessType == BusinessType.ONLINE) "1. Nama Toko Online / Olshop" else "1. Nama Toko / Usaha") },
+                            placeholder = { Text(if (setupBusinessType == BusinessType.ONLINE) "Contoh: Bella Fashion Online Shop" else "Contoh: Voravio Mart") },
                             leadingIcon = { Icon(Icons.Default.Storefront, contentDescription = null, tint = VibrantBlue) },
                             singleLine = true,
                             shape = RoundedCornerShape(10.dp),
@@ -495,11 +730,14 @@ fun AuthScreen(
                                     return@Button
                                 }
 
-                                // Setup store and account with PIN only
+                                // Setup store and account with PIN and chosen BusinessType
                                 authPreferences.setupInitialAccountAndStore(
                                     store = sName,
                                     user = uName,
-                                    userPin = pCode
+                                    userPin = pCode,
+                                    type = setupBusinessType,
+                                    onlineLink = setupOnlineLink,
+                                    courier = setupCourier
                                 )
 
                                 onAuthSuccess(uName, uName, UserRole.OWNER)

@@ -9,6 +9,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -50,6 +51,8 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -81,6 +84,9 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import coil.compose.AsyncImage
 import com.example.data.local.AuthPreferences
+import androidx.compose.material.icons.filled.Language
+import androidx.compose.material.icons.filled.LocalShipping
+import com.example.data.model.BusinessType
 import com.example.data.model.ShiftSchedule
 import com.example.data.model.StaffUser
 import com.example.data.model.StoreProfile
@@ -113,7 +119,10 @@ fun ProfileSettingsDialog(
     var selectedTab by remember { mutableIntStateOf(0) } // 0: Toko, 1: QRIS, 2: Kasir/Staff, 3: Shift
 
     // Store Form State
+    var businessType by remember { mutableStateOf(storeProfile.businessType) }
     var storeName by remember { mutableStateOf(storeProfile.storeName) }
+    var onlineStoreLink by remember { mutableStateOf(storeProfile.onlineStoreLink) }
+    var defaultCourier by remember { mutableStateOf(storeProfile.defaultCourier.ifBlank { "J&T Express" }) }
     var storeAddress by remember { mutableStateOf(storeProfile.address) }
     var storePhone by remember { mutableStateOf(storeProfile.phone) }
     var storeLogoUri by remember { mutableStateOf(storeProfile.logoUri) }
@@ -224,15 +233,24 @@ fun ProfileSettingsDialog(
                 }
 
                 // Tabs Navigation
-                val tabs = listOf(
-                    Triple(0, "Toko & Bisnis", Icons.Default.Store),
-                    Triple(1, "Foto QRIS", Icons.Default.QrCode),
-                    Triple(2, "Kasir", Icons.Default.People),
-                    Triple(3, "Jadwal Shift", Icons.Default.Schedule)
-                )
+                val tabs = if (businessType == BusinessType.ONLINE) {
+                    listOf(
+                        Triple(0, "Toko Online", Icons.Default.Store),
+                        Triple(1, "Foto QRIS / Rekening", Icons.Default.QrCode),
+                        Triple(2, "Admin & CS", Icons.Default.People)
+                    )
+                } else {
+                    listOf(
+                        Triple(0, "Toko & Bisnis", Icons.Default.Store),
+                        Triple(1, "Foto QRIS", Icons.Default.QrCode),
+                        Triple(2, "Kasir", Icons.Default.People),
+                        Triple(3, "Jadwal Shift", Icons.Default.Schedule)
+                    )
+                }
+                val safeSelectedTab = selectedTab.coerceAtMost(tabs.size - 1)
 
                 ScrollableTabRow(
-                    selectedTabIndex = selectedTab,
+                    selectedTabIndex = safeSelectedTab,
                     containerColor = CrispWhite,
                     edgePadding = 12.dp,
                     divider = {}
@@ -271,7 +289,7 @@ fun ProfileSettingsDialog(
                         .weight(1f)
                         .fillMaxWidth()
                 ) {
-                    when (selectedTab) {
+                    when (safeSelectedTab) {
                         0 -> {
                             // TAB 0: Profil Toko & Bisnis
                             Column(
@@ -351,12 +369,105 @@ fun ProfileSettingsDialog(
 
                                         Spacer(modifier = Modifier.height(14.dp))
 
+                                        // PILIH JENIS USAHA
+                                        Text("Jenis Usaha / Mode Operasional:", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = DarkSlate)
+                                        Spacer(modifier = Modifier.height(6.dp))
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                        ) {
+                                            val isOffline = businessType == BusinessType.OFFLINE
+                                            Box(
+                                                modifier = Modifier
+                                                    .weight(1f)
+                                                    .clip(RoundedCornerShape(8.dp))
+                                                    .border(1.dp, if (isOffline) DeepRoyalBlue else Color(0xFFCBD5E1), RoundedCornerShape(8.dp))
+                                                    .background(if (isOffline) Color(0xFFEFF6FF) else CrispWhite)
+                                                    .clickable {
+                                                        businessType = BusinessType.OFFLINE
+                                                        receiptHeader = "STRUK PEMBELIAN RESMI"
+                                                    }
+                                                    .padding(10.dp)
+                                            ) {
+                                                Column {
+                                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                                        Icon(Icons.Default.Storefront, contentDescription = null, tint = if (isOffline) DeepRoyalBlue else Color(0xFF64748B), modifier = Modifier.size(16.dp))
+                                                        Spacer(modifier = Modifier.width(6.dp))
+                                                        Text("Usaha Offline", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = if (isOffline) DeepRoyalBlue else DarkSlate)
+                                                    }
+                                                    Text("Kasir fisik & cetak struk", fontSize = 10.sp, color = Color(0xFF64748B))
+                                                }
+                                            }
+
+                                            val isOnline = businessType == BusinessType.ONLINE
+                                            Box(
+                                                modifier = Modifier
+                                                    .weight(1f)
+                                                    .clip(RoundedCornerShape(8.dp))
+                                                    .border(1.dp, if (isOnline) EmeraldGreen else Color(0xFFCBD5E1), RoundedCornerShape(8.dp))
+                                                    .background(if (isOnline) Color(0xFFECFDF5) else CrispWhite)
+                                                    .clickable {
+                                                        businessType = BusinessType.ONLINE
+                                                        receiptHeader = "INVOICE / NOTA PESANAN ONLINE"
+                                                    }
+                                                    .padding(10.dp)
+                                            ) {
+                                                Column {
+                                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                                        Icon(Icons.Default.Language, contentDescription = null, tint = if (isOnline) EmeraldGreen else Color(0xFF64748B), modifier = Modifier.size(16.dp))
+                                                        Spacer(modifier = Modifier.width(6.dp))
+                                                        Text("Usaha Online", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = if (isOnline) EmeraldGreen else DarkSlate)
+                                                    }
+                                                    Text("Olshop, resi & tanpa kasir fisik", fontSize = 10.sp, color = Color(0xFF64748B))
+                                                }
+                                            }
+                                        }
+
+                                        if (businessType == BusinessType.ONLINE) {
+                                            Spacer(modifier = Modifier.height(10.dp))
+                                            Text("Kurir Ekspedisi Utama:", fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = DarkSlate)
+                                            Spacer(modifier = Modifier.height(4.dp))
+                                            val courierList = listOf("J&T Express", "JNE", "SiCepat", "GoSend", "GrabExpress", "Anteraja", "Shopee Xpress")
+                                            Row(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .horizontalScroll(rememberScrollState()),
+                                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                            ) {
+                                                courierList.forEach { cr ->
+                                                    val isSel = defaultCourier == cr
+                                                    FilterChip(
+                                                        selected = isSel,
+                                                        onClick = { defaultCourier = cr },
+                                                        label = { Text(cr, fontSize = 10.sp) },
+                                                        colors = FilterChipDefaults.filterChipColors(
+                                                            selectedContainerColor = EmeraldGreen,
+                                                            selectedLabelColor = CrispWhite,
+                                                            containerColor = CrispWhite
+                                                        )
+                                                    )
+                                                }
+                                            }
+
+                                            Spacer(modifier = Modifier.height(8.dp))
+                                            OutlinedTextField(
+                                                value = onlineStoreLink,
+                                                onValueChange = { onlineStoreLink = it },
+                                                label = { Text("Link Toko Online / IG / WhatsApp") },
+                                                placeholder = { Text("Contoh: @olshop.id") },
+                                                singleLine = true,
+                                                modifier = Modifier.fillMaxWidth()
+                                            )
+                                        }
+
+                                        Spacer(modifier = Modifier.height(10.dp))
+
                                         // Store Name
                                         OutlinedTextField(
                                             value = storeName,
                                             onValueChange = { storeName = it },
-                                            label = { Text("Nama Toko") },
-                                            placeholder = { Text("Contoh: VORAVIO MART") },
+                                            label = { Text(if (businessType == BusinessType.ONLINE) "Nama Toko Online" else "Nama Toko") },
+                                            placeholder = { Text(if (businessType == BusinessType.ONLINE) "Contoh: Bella Fashion Online Shop" else "Contoh: VORAVIO MART") },
                                             singleLine = true,
                                             modifier = Modifier.fillMaxWidth()
                                         )
@@ -419,13 +530,27 @@ fun ProfileSettingsDialog(
                                             onClick = {
                                                 val updated = storeProfile.copy(
                                                     storeName = storeName.trim(),
+                                                    businessType = businessType,
+                                                    onlineStoreLink = onlineStoreLink,
+                                                    defaultCourier = defaultCourier,
                                                     address = storeAddress.trim(),
                                                     phone = storePhone.trim(),
                                                     logoUri = storeLogoUri,
+                                                    receiptHeader = if (businessType == BusinessType.ONLINE) "INVOICE / NOTA PESANAN ONLINE" else "STRUK PEMBELIAN RESMI",
                                                     printerPaperWidth = printerPaperWidth
                                                 )
                                                 viewModel.updateStoreProfile(updated)
-                                                Toast.makeText(context, "Profil toko berhasil disimpan!", Toast.LENGTH_SHORT).show()
+                                                authPreferences.saveStoreProfile(
+                                                    name = storeName.trim(),
+                                                    address = storeAddress.trim(),
+                                                    phone = storePhone.trim(),
+                                                    logoUri = storeLogoUri,
+                                                    qrisUri = storeQrisUri,
+                                                    type = businessType,
+                                                    onlineLink = onlineStoreLink,
+                                                    courier = defaultCourier
+                                                )
+                                                Toast.makeText(context, "Profil toko (${businessType.shortLabel}) berhasil disimpan!", Toast.LENGTH_SHORT).show()
                                             },
                                             colors = ButtonDefaults.buttonColors(containerColor = DeepRoyalBlue, contentColor = CrispWhite),
                                             shape = RoundedCornerShape(8.dp),
@@ -580,8 +705,17 @@ fun ProfileSettingsDialog(
                                     horizontalArrangement = Arrangement.SpaceBetween
                                 ) {
                                     Column {
-                                        Text("Daftar Akun Kasir & Staf", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = DarkSlate)
-                                        Text("Buat akun Kasir 1, Kasir 2, atau Manajer", fontSize = 11.sp, color = Color(0xFF64748B))
+                                        Text(
+                                            text = if (businessType == BusinessType.ONLINE) "Daftar Tim Admin & CS Online" else "Daftar Akun Kasir & Staf",
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 14.sp,
+                                            color = DarkSlate
+                                        )
+                                        Text(
+                                            text = if (businessType == BusinessType.ONLINE) "Kelola akun Admin Penjualan, CS, atau Owner" else "Buat akun Kasir 1, Kasir 2, atau Manajer",
+                                            fontSize = 11.sp,
+                                            color = Color(0xFF64748B)
+                                        )
                                     }
 
                                     Button(
@@ -591,7 +725,12 @@ fun ProfileSettingsDialog(
                                     ) {
                                         Icon(Icons.Default.Add, contentDescription = null, tint = CrispWhite, modifier = Modifier.size(16.dp))
                                         Spacer(modifier = Modifier.width(4.dp))
-                                        Text("Tambah Kasir", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = CrispWhite)
+                                        Text(
+                                            text = if (businessType == BusinessType.ONLINE) "Tambah Admin/CS" else "Tambah Kasir",
+                                            fontSize = 11.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = CrispWhite
+                                        )
                                     }
                                 }
 
@@ -699,6 +838,29 @@ fun ProfileSettingsDialog(
                         3 -> {
                             // TAB 3: Shift Dinamis
                             Column(modifier = Modifier.fillMaxSize().padding(14.dp)) {
+                                if (businessType == BusinessType.ONLINE) {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clip(RoundedCornerShape(10.dp))
+                                            .background(Color(0xFFEFF6FF))
+                                            .border(1.dp, Color(0xFFBFDBFE), RoundedCornerShape(10.dp))
+                                            .padding(12.dp)
+                                    ) {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Icon(Icons.Default.Language, contentDescription = null, tint = DeepRoyalBlue, modifier = Modifier.size(20.dp))
+                                            Spacer(modifier = Modifier.width(8.dp))
+                                            Text(
+                                                text = "Mode Usaha Online Aktif - Fitur shift kasir toko fisik dinonaktifkan untuk toko online. Semua pesanan dicatat langsung.",
+                                                fontSize = 11.sp,
+                                                color = DeepRoyalBlue,
+                                                lineHeight = 15.sp
+                                            )
+                                        }
+                                    }
+                                    Spacer(modifier = Modifier.height(10.dp))
+                                }
+
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
                                     verticalAlignment = Alignment.CenterVertically,
