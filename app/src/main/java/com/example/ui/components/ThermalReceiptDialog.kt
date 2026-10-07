@@ -2,6 +2,7 @@ package com.example.ui.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -17,8 +18,11 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.EditNote
+import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FileDownload
 import androidx.compose.material.icons.filled.Print
 import androidx.compose.material.icons.filled.Share
@@ -29,17 +33,25 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Divider
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -62,19 +74,45 @@ fun ThermalReceiptDialog(
     items: List<CartItem>,
     store: StoreProfile,
     onDismiss: () -> Unit,
-    onPrintSuccess: (String) -> Unit
+    onPrintSuccess: (String) -> Unit,
+    onUpdateOrderNote: ((String) -> Unit)? = null
 ) {
     val context = LocalContext.current
-    val receiptText = remember(order, items, store) {
-        EscPosPrinterHelper.formatReceiptText(order, items, store, is80mm = store.printerPaperWidth == "80mm")
+
+    // Live state for customized message on receipt
+    var customMessage by remember(order.orderId) { mutableStateOf(order.orderNote) }
+
+    val currentOrder = remember(order, customMessage) {
+        order.copy(orderNote = customMessage)
+    }
+
+    val receiptText = remember(currentOrder, items, store, customMessage) {
+        EscPosPrinterHelper.formatReceiptText(
+            order = currentOrder,
+            items = items,
+            store = store,
+            is80mm = store.printerPaperWidth == "80mm",
+            customReceiptNote = customMessage
+        )
+    }
+
+    val quickTemplates = remember(store.storeName, store.instagram) {
+        listOf(
+            "Terima kasih banyak, semoga harinya menyenangkan! 😊",
+            "Selamat menikmati! Ditunggu kedatangannya kembali ya ✨",
+            "Tunjukkan struk ini untuk diskon 10% di kunjungan berikutnya! 🎉",
+            if (store.instagram.isNotBlank()) "Tag foto belanjaanmu ke IG ${store.instagram}! ⭐" else "Terima kasih sudah berbelanja di toko kami! ❤️",
+            "Senang melayani Anda hari ini! Sehat dan sukses selalu ya 🙏"
+        )
     }
 
     AlertDialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(usePlatformDefaultWidth = false),
         modifier = Modifier
-            .fillMaxWidth(0.94f)
-            .clip(RoundedCornerShape(16.dp)),
+            .fillMaxWidth(0.95f)
+            .clip(RoundedCornerShape(16.dp))
+            .testTag("thermal_receipt_dialog"),
         confirmButton = {},
         title = null,
         text = {
@@ -84,7 +122,7 @@ fun ThermalReceiptDialog(
                     .verticalScroll(rememberScrollState()),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // Success Badge
+                // Success Badge & Header
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -93,7 +131,7 @@ fun ThermalReceiptDialog(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Box(
                             modifier = Modifier
-                                .size(36.dp)
+                                .size(38.dp)
                                 .background(EmeraldGreen.copy(alpha = 0.15f), CircleShape),
                             contentAlignment = Alignment.Center
                         ) {
@@ -104,7 +142,7 @@ fun ThermalReceiptDialog(
                                 modifier = Modifier.size(24.dp)
                             )
                         }
-                        Spacer(modifier = Modifier.width(8.dp))
+                        Spacer(modifier = Modifier.width(10.dp))
                         Column {
                             Text(
                                 text = "Transaksi Berhasil!",
@@ -113,7 +151,7 @@ fun ThermalReceiptDialog(
                                 color = DarkSlate
                             )
                             Text(
-                                text = "ID: ${order.orderId}",
+                                text = "No: ${order.orderId} • ${order.customerName}",
                                 fontSize = 11.sp,
                                 color = Color(0xFF64748B)
                             )
@@ -126,13 +164,140 @@ fun ThermalReceiptDialog(
 
                 Spacer(modifier = Modifier.height(12.dp))
 
+                // INTERACTIVE SECTION: Custom Message for Customer on Receipt
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .border(1.dp, Color(0xFFBFDBFE), RoundedCornerShape(12.dp)),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFFF0F7FF)),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Column(modifier = Modifier.padding(12.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    imageVector = Icons.Default.Favorite,
+                                    contentDescription = null,
+                                    tint = DeepRoyalBlue,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = "Pesan Khusus di Struk",
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 13.sp,
+                                    color = DeepRoyalBlue
+                                )
+                            }
+                            Surface(
+                                color = Color(0xFFDBEAFE),
+                                shape = RoundedCornerShape(4.dp)
+                            ) {
+                                Text(
+                                    text = "Bisa Custom Bebas",
+                                    fontSize = 9.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = DeepRoyalBlue,
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                )
+                            }
+                        }
+
+                        Text(
+                            text = "Ketik pesan hangat, sapaan personal, atau info promo agar hubungan dengan customer semakin dekat:",
+                            fontSize = 11.sp,
+                            color = Color(0xFF475569),
+                            modifier = Modifier.padding(top = 4.dp, bottom = 8.dp)
+                        )
+
+                        OutlinedTextField(
+                            value = customMessage,
+                            onValueChange = { newText ->
+                                customMessage = newText
+                                onUpdateOrderNote?.invoke(newText)
+                            },
+                            placeholder = {
+                                Text(
+                                    "Ketik pesan bebas di sini (misal: Terima kasih Kak Sarah, semoga harinya menyenangkan! ❤️)",
+                                    fontSize = 12.sp,
+                                    color = Color(0xFF94A3B8)
+                                )
+                            },
+                            maxLines = 3,
+                            shape = RoundedCornerShape(8.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .testTag("receipt_custom_message_input")
+                        )
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        // Quick Template Shortcut Chips
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .horizontalScroll(rememberScrollState()),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            quickTemplates.forEach { template ->
+                                FilterChip(
+                                    selected = customMessage == template,
+                                    onClick = {
+                                        customMessage = template
+                                        onUpdateOrderNote?.invoke(template)
+                                    },
+                                    label = {
+                                        Text(
+                                            text = template.take(32) + if (template.length > 32) "…" else "",
+                                            fontSize = 10.sp
+                                        )
+                                    },
+                                    leadingIcon = {
+                                        Icon(
+                                            Icons.Default.AutoAwesome,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(12.dp)
+                                        )
+                                    },
+                                    colors = FilterChipDefaults.filterChipColors(
+                                        selectedContainerColor = DeepRoyalBlue,
+                                        selectedLabelColor = CrispWhite,
+                                        containerColor = CrispWhite
+                                    ),
+                                    shape = RoundedCornerShape(8.dp)
+                                )
+                            }
+                            if (customMessage.isNotBlank()) {
+                                FilterChip(
+                                    selected = false,
+                                    onClick = {
+                                        customMessage = ""
+                                        onUpdateOrderNote?.invoke("")
+                                    },
+                                    label = {
+                                        Text("Hapus Pesan", fontSize = 10.sp, color = Color(0xFFDC2626))
+                                    },
+                                    shape = RoundedCornerShape(8.dp),
+                                    colors = FilterChipDefaults.filterChipColors(containerColor = Color(0xFFFEE2E2))
+                                )
+                            }
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
                 // Realistic Paper Receipt View
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
                         .border(1.dp, Color(0xFFCBD5E1), RoundedCornerShape(8.dp)),
                     colors = CardDefaults.cardColors(containerColor = Color(0xFFFFFFF8)),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 3.dp),
                     shape = RoundedCornerShape(8.dp)
                 ) {
                     Column(
@@ -170,7 +335,7 @@ fun ThermalReceiptDialog(
                         Divider(color = Color(0xFF94A3B8), thickness = 1.dp)
                         Spacer(modifier = Modifier.height(8.dp))
 
-                        // Receipt Details Monospace
+                        // Receipt Details Monospace with custom message rendered live
                         Text(
                             text = receiptText,
                             fontFamily = FontFamily.Monospace,
@@ -194,10 +359,11 @@ fun ThermalReceiptDialog(
                         onClick = {
                             PosPrinterManager.printReceiptToSystem(
                                 context = context,
-                                order = order,
+                                order = currentOrder,
                                 items = items,
                                 store = store,
-                                is80mm = store.printerPaperWidth == "80mm"
+                                is80mm = store.printerPaperWidth == "80mm",
+                                customReceiptNote = customMessage
                             )
                         },
                         colors = ButtonDefaults.buttonColors(containerColor = DeepRoyalBlue),
@@ -216,10 +382,11 @@ fun ThermalReceiptDialog(
                         onClick = {
                             PosPrinterManager.downloadReceipt(
                                 context = context,
-                                order = order,
+                                order = currentOrder,
                                 items = items,
                                 store = store,
-                                is80mm = store.printerPaperWidth == "80mm"
+                                is80mm = store.printerPaperWidth == "80mm",
+                                customReceiptNote = customMessage
                             )
                         },
                         colors = ButtonDefaults.buttonColors(containerColor = EmeraldGreen),
@@ -259,10 +426,11 @@ fun ThermalReceiptDialog(
                     OutlinedButton(
                         onClick = {
                             val bytes = EscPosPrinterHelper.generateEscPosBytes(
-                                order,
-                                items,
-                                store,
-                                is80mm = store.printerPaperWidth == "80mm"
+                                order = currentOrder,
+                                items = items,
+                                store = store,
+                                is80mm = store.printerPaperWidth == "80mm",
+                                customReceiptNote = customMessage
                             )
                             onPrintSuccess("Stream ESC/POS (${bytes.size} bytes) terkirim ke Thermal!")
                         },
@@ -275,7 +443,7 @@ fun ThermalReceiptDialog(
                     }
                 }
 
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(10.dp))
 
                 Button(
                     onClick = onDismiss,
@@ -291,3 +459,4 @@ fun ThermalReceiptDialog(
         }
     )
 }
+

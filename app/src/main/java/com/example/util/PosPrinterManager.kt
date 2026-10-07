@@ -196,7 +196,8 @@ object PosPrinterManager {
         order: OrderEntity,
         items: List<CartItem>,
         store: StoreProfile,
-        is80mm: Boolean = false
+        is80mm: Boolean = false,
+        customReceiptNote: String = order.orderNote
     ): Bitmap {
         val widthPx = if (is80mm) 576 else 384 // standard ESC/POS pixel widths
         val padding = 16
@@ -236,8 +237,10 @@ object PosPrinterManager {
         }
 
         // Estimate canvas height
-        val estimatedLines = 25 + (items.size * 3) + store.receiptFooter.lines().size
-        val heightPx = estimatedLines * 22 + 100
+        val effectiveNote = if (customReceiptNote.isNotBlank()) customReceiptNote else order.orderNote
+        val noteLinesCount = if (effectiveNote.isNotBlank()) effectiveNote.lines().size + 2 else 0
+        val estimatedLines = 26 + (items.size * 3) + store.receiptFooter.lines().size + noteLinesCount
+        val heightPx = estimatedLines * 24 + 120
 
         val bitmap = Bitmap.createBitmap(widthPx, heightPx, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(bitmap)
@@ -340,7 +343,36 @@ object PosPrinterManager {
         canvas.drawLine(padding.toFloat(), y, (widthPx - padding).toFloat(), y, linePaint)
         y += 20f
 
-        // 5. Store Footer Notes
+        // 5. Custom Personalized Message for Customer
+        if (effectiveNote.isNotBlank()) {
+            val noteHeaderPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = Color.BLACK
+                textSize = 12f
+                typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+                textAlign = Paint.Align.CENTER
+            }
+            val noteBodyPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = Color.parseColor("#1E293B")
+                textSize = 13f
+                typeface = Typeface.create(Typeface.SERIF, Typeface.ITALIC)
+                textAlign = Paint.Align.CENTER
+            }
+
+            canvas.drawText("💌 PESAN UNTUK PELANGGAN 💌", centerX, y, noteHeaderPaint)
+            y += 18f
+            effectiveNote.lines().forEach { line ->
+                val trimmed = line.trim()
+                if (trimmed.isNotBlank()) {
+                    canvas.drawText("\"$trimmed\"", centerX, y, noteBodyPaint)
+                    y += 18f
+                }
+            }
+            y += 4f
+            canvas.drawLine(padding.toFloat(), y, (widthPx - padding).toFloat(), y, linePaint)
+            y += 20f
+        }
+
+        // 6. Store Footer Notes
         store.receiptFooter.lines().forEach { line ->
             canvas.drawText(line.trim(), centerX, y, headerPaint)
             y += 16f
@@ -485,9 +517,10 @@ object PosPrinterManager {
         order: OrderEntity,
         items: List<CartItem>,
         store: StoreProfile,
-        is80mm: Boolean = false
+        is80mm: Boolean = false,
+        customReceiptNote: String = order.orderNote
     ) {
-        val bitmap = renderReceiptBitmap(context, order, items, store, is80mm)
+        val bitmap = renderReceiptBitmap(context, order, items, store, is80mm, customReceiptNote)
         printBitmap(context, "Struk_${order.orderId}", bitmap)
     }
 
@@ -499,9 +532,10 @@ object PosPrinterManager {
         order: OrderEntity,
         items: List<CartItem>,
         store: StoreProfile,
-        is80mm: Boolean = false
+        is80mm: Boolean = false,
+        customReceiptNote: String = order.orderNote
     ): Uri? {
-        val bitmap = renderReceiptBitmap(context, order, items, store, is80mm)
+        val bitmap = renderReceiptBitmap(context, order, items, store, is80mm, customReceiptNote)
         return saveBitmapToDevice(context, bitmap, "struk_${order.orderId}")
     }
 }

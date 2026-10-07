@@ -579,6 +579,9 @@ fun PosMasterApp(viewModel: PosViewModel = viewModel()) {
                     onDismiss = { viewModel.dismissReceiptDialog() },
                     onPrintSuccess = { msg ->
                         Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
+                    },
+                    onUpdateOrderNote = { newNote ->
+                        lastCompletedOrder?.let { viewModel.updateOrderNote(it.orderId, newNote) }
                     }
                 )
             }

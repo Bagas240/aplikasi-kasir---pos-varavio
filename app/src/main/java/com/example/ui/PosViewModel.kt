@@ -6,6 +6,8 @@ import androidx.lifecycle.viewModelScope
 import com.example.data.local.AppDatabase
 import com.example.data.local.AuthPreferences
 import com.example.data.model.CartItem
+import com.example.data.model.Customer
+import com.example.data.model.CustomerDebt
 import com.example.data.model.OrderEntity
 import com.example.data.model.OrderStatus
 import com.example.data.model.PaymentMethod
@@ -119,6 +121,9 @@ class PosViewModel(application: Application) : AndroidViewModel(application) {
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val shiftSchedules: StateFlow<List<ShiftSchedule>> = repository.allShiftSchedules
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val customers: StateFlow<List<Customer>> = repository.allCustomers
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val transactionLogs: StateFlow<List<TransactionLog>> = repository.allTransactionLogs
@@ -328,13 +333,15 @@ class PosViewModel(application: Application) : AndroidViewModel(application) {
         splitMethod2: String = "",
         splitAmt1: Double = 0.0,
         splitAmt2: Double = 0.0,
-        customerName: String = ""
+        customerName: String = "",
+        receiptNote: String = ""
     ) {
         val grandTotal = cartGrandTotal
         val change = if (method == PaymentMethod.CASH) (cashPaid - grandTotal).coerceAtLeast(0.0) else 0.0
         val orderId = "ORD-" + System.currentTimeMillis().toString().takeLast(8)
         val activeShift = shifts.value.find { it.status == "OPEN" }
         val finalCustName = customerName.trim().ifBlank { _selectedCustomer.value?.name ?: "Pelanggan Walk-In" }
+        val finalNote = if (receiptNote.isNotBlank()) receiptNote else _transactionNote.value
 
         val order = OrderEntity(
             orderId = orderId,
@@ -359,7 +366,7 @@ class PosViewModel(application: Application) : AndroidViewModel(application) {
             splitMethod2 = splitMethod2,
             splitAmount1 = splitAmt1,
             splitAmount2 = splitAmt2,
-            orderNote = _transactionNote.value,
+            orderNote = finalNote,
             status = OrderStatus.COMPLETED.name,
             itemsJson = PosRepository.serializeItems(_cartItems.value)
         )
@@ -376,6 +383,51 @@ class PosViewModel(application: Application) : AndroidViewModel(application) {
             _lastCompletedItems.value = itemsToKeep
             _showReceiptDialog.value = true
             clearCart()
+        }
+    }
+
+    fun updateOrderNote(orderId: String, note: String) {
+        viewModelScope.launch {
+            repository.updateOrderNote(orderId, note)
+            if (_lastCompletedOrder.value?.orderId == orderId) {
+                _lastCompletedOrder.value = _lastCompletedOrder.value?.copy(orderNote = note)
+            }
+        }
+    }
+
+    fun printReceiptForOrder(order: OrderEntity) {
+        val items = PosRepository.deserializeItems(order.itemsJson, products.value)
+        _lastCompletedOrder.value = order
+        _lastCompletedItems.value = items
+        _showReceiptDialog.value = true
+    }
+
+    fun printReceiptForTransaction(log: TransactionLog) {
+        viewModelScope.launch {
+            val order = repository.getOrderById(log.orderId)
+            if (order != null) {
+                printReceiptForOrder(order)
+            } else {
+                val syntheticOrder = OrderEntity(
+                    orderId = log.orderId,
+                    timestamp = log.timestamp,
+                    cashierName = log.cashierName,
+                    cashierRole = log.cashierRole,
+                    shiftName = log.shiftName,
+                    customerName = log.customerName,
+                    subtotal = log.subtotal,
+                    discountTotal = log.discountAmount,
+                    taxAmount = log.taxAmount,
+                    grandTotal = log.grandTotal,
+                    paymentMethod = log.paymentMethod,
+                    cashReceived = log.cashReceived,
+                    changeGiven = log.changeGiven,
+                    orderNote = log.notes
+                )
+                _lastCompletedOrder.value = syntheticOrder
+                _lastCompletedItems.value = emptyList()
+                _showReceiptDialog.value = true
+            }
         }
     }
 

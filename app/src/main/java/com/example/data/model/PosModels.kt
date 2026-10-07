@@ -126,7 +126,8 @@ enum class PaymentMethod(val label: String) {
     CREDIT_CARD("Credit Card"),
     E_WALLET("E-Wallet"),
     BANK_TRANSFER("Bank Transfer"),
-    SPLIT("Split Payment")
+    SPLIT("Split Payment"),
+    DEBT("Kas Bon / Piutang")
 }
 
 enum class OrderStatus {
@@ -285,3 +286,49 @@ data class StoreProfile(
     val printerPaperWidth: String = "58mm", // 58mm or 80mm
     val loyaltyPointRate: Int = 1000 // 1 pt per Rp 1000
 )
+
+@Immutable
+@Entity(
+    tableName = "customers",
+    indices = [
+        Index(value = ["phone"]),
+        Index(value = ["name"])
+    ]
+)
+data class Customer(
+    @PrimaryKey(autoGenerate = true)
+    val id: Long = 0,
+    val name: String,
+    val phone: String = "",
+    val email: String = "",
+    val address: String = "",
+    val points: Int = 0,
+    val debtBalance: Double = 0.0,
+    val notes: String = "",
+    val isActive: Boolean = true,
+    val createdAt: Long = System.currentTimeMillis()
+)
+
+@Immutable
+@Entity(
+    tableName = "customer_debts",
+    indices = [
+        Index(value = ["customerId"]),
+        Index(value = ["orderId"]),
+        Index(value = ["isPaid"])
+    ]
+)
+data class CustomerDebt(
+    @PrimaryKey(autoGenerate = true)
+    val id: Long = 0,
+    val customerId: Long,
+    val customerName: String = "",
+    val orderId: String = "",
+    val amount: Double = 0.0,
+    val remainingAmount: Double = amount,
+    val dueDate: Long = System.currentTimeMillis() + (7L * 24 * 60 * 60 * 1000),
+    val isPaid: Boolean = false,
+    val notes: String = "",
+    val createdAt: Long = System.currentTimeMillis()
+)
+

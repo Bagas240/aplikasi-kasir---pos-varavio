@@ -4,6 +4,8 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import com.example.data.model.Customer
+import com.example.data.model.CustomerDebt
 import com.example.data.model.OrderEntity
 import com.example.data.model.Product
 import com.example.data.model.PurchaseOrder
@@ -22,9 +24,11 @@ import com.example.data.model.TransactionLog
         Shift::class,
         TransactionLog::class,
         StaffUser::class,
-        ShiftSchedule::class
+        ShiftSchedule::class,
+        Customer::class,
+        CustomerDebt::class
     ],
-    version = 9,
+    version = 10,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {

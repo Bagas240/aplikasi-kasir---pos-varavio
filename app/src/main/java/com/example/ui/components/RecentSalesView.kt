@@ -28,6 +28,7 @@ import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.material.icons.filled.FileDownload
 import androidx.compose.material.icons.filled.Payment
+import androidx.compose.material.icons.filled.Print
 import androidx.compose.material.icons.filled.ReceiptLong
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.ShoppingBag
@@ -73,6 +74,7 @@ fun RecentSalesDialog(
     recentSales: List<TransactionLog>,
     onDismiss: () -> Unit,
     onExportClick: (() -> Unit)? = null,
+    onPrintReceiptClick: ((TransactionLog) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     AlertDialog(
@@ -85,7 +87,8 @@ fun RecentSalesDialog(
             RecentSalesContent(
                 recentSales = recentSales,
                 onClose = onDismiss,
-                onExportClick = onExportClick
+                onExportClick = onExportClick,
+                onPrintReceiptClick = onPrintReceiptClick
             )
         },
         confirmButton = {}
@@ -97,6 +100,7 @@ fun RecentSalesContent(
     recentSales: List<TransactionLog>,
     onClose: (() -> Unit)? = null,
     onExportClick: (() -> Unit)? = null,
+    onPrintReceiptClick: ((TransactionLog) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     var searchQuery by remember { mutableStateOf("") }
@@ -293,7 +297,8 @@ fun RecentSalesContent(
                 items(filteredSales, key = { it.id }) { log ->
                     RecentSaleItemCard(
                         log = log,
-                        formattedDate = timeFormat.format(Date(log.timestamp))
+                        formattedDate = timeFormat.format(Date(log.timestamp)),
+                        onPrintReceiptClick = onPrintReceiptClick
                     )
                 }
             }
@@ -319,6 +324,7 @@ fun RecentSalesContent(
 fun RecentSaleItemCard(
     log: TransactionLog,
     formattedDate: String,
+    onPrintReceiptClick: ((TransactionLog) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     var expanded by remember { mutableStateOf(false) }
@@ -479,10 +485,27 @@ fun RecentSaleItemCard(
                     if (log.notes.isNotBlank()) {
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            text = "Catatan: ${log.notes}",
+                            text = "Catatan Struk: ${log.notes}",
                             fontSize = 11.sp,
                             color = Color(0xFF475569)
                         )
+                    }
+
+                    if (onPrintReceiptClick != null) {
+                        Spacer(modifier = Modifier.height(10.dp))
+                        Button(
+                            onClick = { onPrintReceiptClick(log) },
+                            colors = ButtonDefaults.buttonColors(containerColor = DeepRoyalBlue),
+                            shape = RoundedCornerShape(8.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(38.dp)
+                                .testTag("reprint_receipt_button_${log.orderId}")
+                        ) {
+                            Icon(Icons.Default.Print, contentDescription = null, tint = CrispWhite, modifier = Modifier.size(15.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("Cetak / Lihat Struk & Edit Pesan", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = CrispWhite)
+                        }
                     }
                 }
             }

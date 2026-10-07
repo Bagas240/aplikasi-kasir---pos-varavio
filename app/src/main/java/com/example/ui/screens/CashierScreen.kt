@@ -893,9 +893,9 @@ fun CashierScreen(
             selectedCustomer = selectedCustomer,
             storeProfile = storeProfile,
             onUpdateQrisImage = { uri -> viewModel.updateStoreQrisImage(uri) },
-            onProcessPayment = { method, cashPaid, splitMethod2, splitAmt1, splitAmt2, custName ->
+            onProcessPayment = { method, cashPaid, splitMethod2, splitAmt1, splitAmt2, custName, receiptNote ->
                 showCheckoutDialog = false
-                viewModel.processCheckout(method, cashPaid, splitMethod2, splitAmt1, splitAmt2, custName)
+                viewModel.processCheckout(method, cashPaid, splitMethod2, splitAmt1, splitAmt2, custName, receiptNote)
             },
             onDismiss = { showCheckoutDialog = false }
         )
@@ -997,6 +997,20 @@ fun CashierScreen(
 
     // CUSTOMER PICKER MODAL
     if (showCustomerPicker) {
+        var customerSearch by remember { mutableStateOf("") }
+        var showAddCustomerForm by remember { mutableStateOf(false) }
+        var newCustName by remember { mutableStateOf("") }
+        var newCustPhone by remember { mutableStateOf("") }
+
+        val filteredCustomers = remember(customers, customerSearch) {
+            if (customerSearch.isBlank()) customers else {
+                customers.filter {
+                    it.name.contains(customerSearch, ignoreCase = true) ||
+                            it.phone.contains(customerSearch, ignoreCase = true)
+                }
+            }
+        }
+
         AlertDialog(
             onDismissRequest = { showCustomerPicker = false },
             confirmButton = {},
@@ -1005,55 +1019,152 @@ fun CashierScreen(
                     Text("Tutup", color = DarkSlate)
                 }
             },
-            title = { Text("Pilih Pelanggan CRM", fontWeight = FontWeight.Bold, fontSize = 16.sp) },
+            title = {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        if (showAddCustomerForm) "Tambah Pelanggan Baru" else "Pilih Pelanggan CRM",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 16.sp
+                    )
+                    if (!showAddCustomerForm) {
+                        TextButton(onClick = { showAddCustomerForm = true }) {
+                            Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp), tint = DeepRoyalBlue)
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Daftar Baru", fontSize = 12.sp, color = DeepRoyalBlue, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+            },
             text = {
                 Column {
-                    // Option: Walk-In (None)
-                    Card(
-                        onClick = {
-                            viewModel.selectCustomer(null)
-                            showCustomerPicker = false
-                        },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 4.dp),
-                        colors = CardDefaults.cardColors(containerColor = Color(0xFFF1F5F9))
-                    ) {
-                        Text("Walk-In (Tanpa Nama)", modifier = Modifier.padding(10.dp), fontWeight = FontWeight.Medium)
-                    }
-
-                    LazyColumn(modifier = Modifier.height(220.dp)) {
-                        items(customers) { cust ->
-                            Card(
-                                onClick = {
-                                    viewModel.selectCustomer(cust)
-                                    showCustomerPicker = false
-                                },
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(vertical = 3.dp),
-                                colors = CardDefaults.cardColors(
-                                    containerColor = if (selectedCustomer?.id == cust.id) Color(0xFFEFF6FF) else CrispWhite
-                                ),
-                                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE2E8F0))
+                    if (showAddCustomerForm) {
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            OutlinedTextField(
+                                value = newCustName,
+                                onValueChange = { newCustName = it },
+                                label = { Text("Nama Lengkap Pelanggan *") },
+                                placeholder = { Text("Contoh: Maya Anggraini") },
+                                singleLine = true,
+                                shape = RoundedCornerShape(8.dp),
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                            OutlinedTextField(
+                                value = newCustPhone,
+                                onValueChange = { newCustPhone = it },
+                                label = { Text("Nomor HP / WhatsApp") },
+                                placeholder = { Text("Contoh: 08123456789") },
+                                singleLine = true,
+                                shape = RoundedCornerShape(8.dp),
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(10.dp),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
+                                OutlinedButton(
+                                    onClick = { showAddCustomerForm = false },
+                                    modifier = Modifier.weight(1f),
+                                    shape = RoundedCornerShape(8.dp)
                                 ) {
-                                    Column {
-                                        Text(cust.name, fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                                        Text(cust.phone, fontSize = 11.sp, color = Color(0xFF64748B))
-                                    }
-                                    Box(
+                                    Text("Batal", color = DarkSlate)
+                                }
+                                Button(
+                                    onClick = {
+                                        if (newCustName.isNotBlank()) {
+                                            val newCust = Customer(
+                                                name = newCustName.trim(),
+                                                phone = newCustPhone.trim()
+                                            )
+                                            viewModel.saveCustomer(newCust)
+                                            viewModel.selectCustomer(newCust)
+                                            showCustomerPicker = false
+                                        }
+                                    },
+                                    enabled = newCustName.isNotBlank(),
+                                    colors = ButtonDefaults.buttonColors(containerColor = DeepRoyalBlue),
+                                    modifier = Modifier.weight(1f),
+                                    shape = RoundedCornerShape(8.dp)
+                                ) {
+                                    Text("Simpan & Pilih", color = CrispWhite, fontWeight = FontWeight.Bold)
+                                }
+                            }
+                        }
+                    } else {
+                        // Search customer input
+                        OutlinedTextField(
+                            value = customerSearch,
+                            onValueChange = { customerSearch = it },
+                            placeholder = { Text("Cari nama atau nomor HP...", fontSize = 12.sp) },
+                            leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, modifier = Modifier.size(16.dp), tint = Color(0xFF64748B)) },
+                            singleLine = true,
+                            shape = RoundedCornerShape(8.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(bottom = 8.dp)
+                        )
+
+                        // Option: Walk-In (None)
+                        Card(
+                            onClick = {
+                                viewModel.selectCustomer(null)
+                                showCustomerPicker = false
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(bottom = 6.dp),
+                            colors = CardDefaults.cardColors(containerColor = Color(0xFFF1F5F9))
+                        ) {
+                            Text("🚶 Pelanggan Walk-In (Tanpa Data)", modifier = Modifier.padding(10.dp), fontWeight = FontWeight.Medium, fontSize = 12.sp)
+                        }
+
+                        if (filteredCustomers.isEmpty()) {
+                            Text(
+                                text = if (customerSearch.isNotBlank()) "Pelanggan tidak ditemukan." else "Belum ada pelanggan terdaftar. Klik '+ Daftar Baru' di atas.",
+                                fontSize = 12.sp,
+                                color = Color(0xFF64748B),
+                                modifier = Modifier.padding(vertical = 16.dp)
+                            )
+                        } else {
+                            LazyColumn(modifier = Modifier.height(220.dp)) {
+                                items(filteredCustomers) { cust ->
+                                    Card(
+                                        onClick = {
+                                            viewModel.selectCustomer(cust)
+                                            showCustomerPicker = false
+                                        },
                                         modifier = Modifier
-                                            .background(EmeraldGreen.copy(alpha = 0.15f), RoundedCornerShape(4.dp))
-                                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                                            .fillMaxWidth()
+                                            .padding(vertical = 3.dp),
+                                        colors = CardDefaults.cardColors(
+                                            containerColor = if (selectedCustomer?.id == cust.id) Color(0xFFEFF6FF) else CrispWhite
+                                        ),
+                                        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE2E8F0))
                                     ) {
-                                        Text("${cust.points} Poin", color = EmeraldDark, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(10.dp),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Column {
+                                                Text(cust.name, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                                                if (cust.phone.isNotBlank()) {
+                                                    Text(cust.phone, fontSize = 11.sp, color = Color(0xFF64748B))
+                                                }
+                                            }
+                                            Box(
+                                                modifier = Modifier
+                                                    .background(EmeraldGreen.copy(alpha = 0.15f), RoundedCornerShape(4.dp))
+                                                    .padding(horizontal = 6.dp, vertical = 2.dp)
+                                            ) {
+                                                Text("${cust.points} Poin", color = EmeraldDark, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                            }
+                                        }
                                     }
                                 }
                             }
@@ -1135,6 +1246,10 @@ fun CashierScreen(
             onExportClick = {
                 showRecentSalesDialog = false
                 showExportCsvDialog = true
+            },
+            onPrintReceiptClick = { log ->
+                showRecentSalesDialog = false
+                viewModel.printReceiptForTransaction(log)
             }
         )
     }
@@ -1623,7 +1738,7 @@ fun CartItemRow(
 fun CheckoutGatewayDialog(
     grandTotal: Double,
     selectedCustomer: Customer?,
-    onProcessPayment: (method: PaymentMethod, cashPaid: Double, splitMethod2: String, splitAmt1: Double, splitAmt2: Double, customerName: String) -> Unit,
+    onProcessPayment: (method: PaymentMethod, cashPaid: Double, splitMethod2: String, splitAmt1: Double, splitAmt2: Double, customerName: String, receiptNote: String) -> Unit,
     onDismiss: () -> Unit
 ) {
     PaymentCheckoutBottomSheet(

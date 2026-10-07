@@ -3,6 +3,8 @@ package com.example.data.repository
 import com.example.data.cache.ProductDataCache
 import com.example.data.local.PosDao
 import com.example.data.model.CartItem
+import com.example.data.model.Customer
+import com.example.data.model.CustomerDebt
 import com.example.data.model.OrderEntity
 import com.example.data.model.OrderStatus
 import com.example.data.model.PaymentMethod
@@ -35,6 +37,7 @@ class PosRepository(
     val allShifts: Flow<List<Shift>> = posDao.getAllShifts()
     val allStaffUsers: Flow<List<StaffUser>> = posDao.getAllStaffUsers()
     val allShiftSchedules: Flow<List<ShiftSchedule>> = posDao.getAllShiftSchedules()
+    val allCustomers: Flow<List<Customer>> = posDao.getAllCustomers()
     val allTransactionLogs: Flow<List<TransactionLog>> = transactionLogRepository.allLogs
     val recentSales: Flow<List<TransactionLog>> = transactionLogRepository.recentSales
 
@@ -124,7 +127,9 @@ class PosRepository(
 
     suspend fun checkoutOrder(
         order: OrderEntity,
-        cartItems: List<CartItem>
+        cartItems: List<CartItem>,
+        customer: Customer? = null,
+        redeemedPoints: Int = 0
     ) {
         val currentShift = posDao.getCurrentOpenShift()
         val shiftTitle = currentShift?.let { "${it.shiftScheduleName} (${it.shiftScheduleTime})" } ?: ""
@@ -172,7 +177,33 @@ class PosRepository(
             )
         }
 
-        // 4. Create Transaction Log for Recent Sales and audit trail
+        // 4. Update customer loyalty points & debt if applicable
+        if (customer != null) {
+            val earnedPoints = (finalOrder.grandTotal / 1000).toInt()
+            val newPoints = (customer.points - redeemedPoints + earnedPoints).coerceAtLeast(0)
+            val isDebt = finalOrder.paymentMethod == PaymentMethod.DEBT.name
+            val newDebtBalance = if (isDebt) customer.debtBalance + finalOrder.grandTotal else customer.debtBalance
+
+            if (isDebt) {
+                posDao.insertDebt(
+                    CustomerDebt(
+                        customerId = customer.id,
+                        customerName = customer.name,
+                        orderId = finalOrder.orderId,
+                        amount = finalOrder.grandTotal,
+                        remainingAmount = finalOrder.grandTotal
+                    )
+                )
+            }
+            posDao.updateCustomer(
+                customer.copy(
+                    points = newPoints,
+                    debtBalance = newDebtBalance
+                )
+            )
+        }
+
+        // 5. Create Transaction Log for Recent Sales and audit trail
         val itemsSummary = cartItems.joinToString(", ") { "${it.displayName} x${it.quantity}" }
         val totalItems = cartItems.sumOf { it.quantity }
         transactionLogRepository.logOrder(
@@ -189,6 +220,13 @@ class PosRepository(
 
     suspend fun deleteDraftOrder(order: OrderEntity) {
         posDao.deleteOrder(order)
+    }
+
+    suspend fun getOrderById(orderId: String): OrderEntity? = posDao.getOrderById(orderId)
+
+    suspend fun updateOrderNote(orderId: String, note: String) {
+        posDao.updateOrderNote(orderId, note)
+        posDao.updateTransactionLogNotes(orderId, note)
     }
 
     suspend fun adjustStock(
@@ -282,6 +320,18 @@ class PosRepository(
     suspend fun insertShiftSchedule(schedule: ShiftSchedule): Long = posDao.insertShiftSchedule(schedule)
     suspend fun updateShiftSchedule(schedule: ShiftSchedule) = posDao.updateShiftSchedule(schedule)
     suspend fun deleteShiftSchedule(schedule: ShiftSchedule) = posDao.deleteShiftSchedule(schedule)
+
+    // CUSTOMER / CRM METHODS
+    suspend fun insertCustomer(customer: Customer): Long = posDao.insertCustomer(customer)
+    suspend fun updateCustomer(customer: Customer) = posDao.updateCustomer(customer)
+    suspend fun deleteCustomer(customer: Customer) = posDao.deleteCustomer(customer)
+    suspend fun getCustomerById(id: Long): Customer? = posDao.getCustomerById(id)
+    suspend fun payCustomerDebt(debt: CustomerDebt, customer: Customer) {
+        val updatedDebt = debt.copy(isPaid = true, remainingAmount = 0.0)
+        posDao.updateDebt(updatedDebt)
+        val newDebtBalance = (customer.debtBalance - debt.amount).coerceAtLeast(0.0)
+        posDao.updateCustomer(customer.copy(debtBalance = newDebtBalance))
+    }
 
     fun getTransactionsByCashier(cashierName: String): Flow<List<TransactionLog>> = posDao.getTransactionsByCashier(cashierName)
 

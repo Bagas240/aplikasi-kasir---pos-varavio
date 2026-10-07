@@ -107,6 +107,9 @@ import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Fullscreen
 import androidx.compose.material.icons.filled.AddPhotoAlternate
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material3.TextButton
+import androidx.compose.foundation.layout.PaddingValues
 import com.example.data.model.PaymentMethod
 import com.example.data.model.StoreProfile
 import androidx.compose.ui.layout.ContentScale
@@ -153,7 +156,7 @@ fun PaymentCheckoutBottomSheet(
     selectedCustomer: Customer? = null,
     storeProfile: StoreProfile = StoreProfile(),
     onUpdateQrisImage: ((String?) -> Unit)? = null,
-    onProcessPayment: (method: PaymentMethod, cashPaid: Double, splitMethod2: String, splitAmt1: Double, splitAmt2: Double, customerName: String) -> Unit,
+    onProcessPayment: (method: PaymentMethod, cashPaid: Double, splitMethod2: String, splitAmt1: Double, splitAmt2: Double, customerName: String, receiptNote: String) -> Unit,
     onDismiss: () -> Unit
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -163,6 +166,8 @@ fun PaymentCheckoutBottomSheet(
 
     // Customer Name State (Optional)
     var customerNameInput by remember { mutableStateOf(selectedCustomer?.name ?: "") }
+    var receiptMessageInput by remember { mutableStateOf("") }
+    var showReceiptMsgField by remember { mutableStateOf(false) }
 
     // Payment Category Tab: 0 = Cash / Tunai, 1 = QRIS Toko, 2 = Kartu / Lainnya
     var selectedCategoryTab by remember { mutableIntStateOf(0) }
@@ -404,6 +409,44 @@ fun PaymentCheckoutBottomSheet(
                     .padding(horizontal = 20.dp, vertical = 6.dp)
                     .testTag("checkout_customer_name_input")
             )
+
+            // Optional Personalized Message for Receipt
+            if (showReceiptMsgField || receiptMessageInput.isNotBlank()) {
+                OutlinedTextField(
+                    value = receiptMessageInput,
+                    onValueChange = { receiptMessageInput = it },
+                    label = { Text("💌 Pesan Khusus di Struk (Opsional)") },
+                    placeholder = { Text("Contoh: Terima kasih Kak! Semoga harinya ceria ❤️") },
+                    leadingIcon = { Icon(Icons.Default.Favorite, contentDescription = null, tint = DeepRoyalBlue, modifier = Modifier.size(18.dp)) },
+                    trailingIcon = {
+                        IconButton(onClick = { receiptMessageInput = ""; showReceiptMsgField = false }) {
+                            Icon(Icons.Default.Close, contentDescription = "Tutup", modifier = Modifier.size(16.dp))
+                        }
+                    },
+                    maxLines = 2,
+                    shape = RoundedCornerShape(10.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp, vertical = 4.dp)
+                        .testTag("checkout_receipt_message_input")
+                )
+            } else {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp, vertical = 2.dp),
+                    horizontalArrangement = Arrangement.Start
+                ) {
+                    TextButton(
+                        onClick = { showReceiptMsgField = true },
+                        contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp)
+                    ) {
+                        Icon(Icons.Default.Favorite, contentDescription = null, tint = DeepRoyalBlue, modifier = Modifier.size(14.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("+ Tambah Pesan Hangat di Struk", fontSize = 11.sp, color = DeepRoyalBlue, fontWeight = FontWeight.SemiBold)
+                    }
+                }
+            }
 
             // Payment Mode Segmented Tab (Cash vs QRIS vs Kartu/Lainnya)
             TabRow(
@@ -993,7 +1036,7 @@ fun PaymentCheckoutBottomSheet(
                             // One-tap customer payment complete & dismiss button
                             Button(
                                 onClick = {
-                                    onProcessPayment(PaymentMethod.QRIS, 0.0, "", 0.0, 0.0, customerNameInput.trim())
+                                    onProcessPayment(PaymentMethod.QRIS, 0.0, "", 0.0, 0.0, customerNameInput.trim(), receiptMessageInput.trim())
                                 },
                                 colors = ButtonDefaults.buttonColors(containerColor = EmeraldGreen),
                                 shape = RoundedCornerShape(12.dp),
@@ -1576,9 +1619,10 @@ fun PaymentCheckoutBottomSheet(
 
                 Button(
                     onClick = {
+                        val note = receiptMessageInput.trim()
                         when (selectedCategoryTab) {
-                            0 -> onProcessPayment(PaymentMethod.CASH, cashPaid, "", 0.0, 0.0, customerNameInput.trim())
-                            1 -> onProcessPayment(PaymentMethod.QRIS, 0.0, "", 0.0, 0.0, customerNameInput.trim())
+                            0 -> onProcessPayment(PaymentMethod.CASH, cashPaid, "", 0.0, 0.0, customerNameInput.trim(), note)
+                            1 -> onProcessPayment(PaymentMethod.QRIS, 0.0, "", 0.0, 0.0, customerNameInput.trim(), note)
                             else -> {
                                 Toast.makeText(
                                     context,
@@ -1734,7 +1778,7 @@ fun PaymentCheckoutBottomSheet(
                         Button(
                             onClick = {
                                 showFullScreenQris = false
-                                onProcessPayment(PaymentMethod.QRIS, 0.0, "", 0.0, 0.0, customerNameInput.trim())
+                                onProcessPayment(PaymentMethod.QRIS, 0.0, "", 0.0, 0.0, customerNameInput.trim(), receiptMessageInput.trim())
                             },
                             colors = ButtonDefaults.buttonColors(containerColor = EmeraldGreen),
                             shape = RoundedCornerShape(14.dp),

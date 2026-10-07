@@ -17,14 +17,40 @@ object EscPosPrinterHelper {
     /**
      * Formats receipt as printable monospace plain text
      */
-    fun formatReceiptText(order: OrderEntity, items: List<CartItem>, store: StoreProfile, is80mm: Boolean = false): String {
+    fun formatReceiptText(
+        order: OrderEntity,
+        items: List<CartItem>,
+        store: StoreProfile,
+        is80mm: Boolean = false,
+        customReceiptNote: String = order.orderNote
+    ): String {
         val width = if (is80mm) 48 else 32
         val sb = StringBuilder()
 
         fun center(text: String): String {
-            if (text.length >= width) return text.take(width)
+            if (text.length >= width) return text
             val pad = (width - text.length) / 2
             return " ".repeat(pad) + text
+        }
+
+        fun wrapText(text: String, maxLen: Int = width): List<String> {
+            val words = text.split(" ")
+            val lines = mutableListOf<String>()
+            var current = StringBuilder()
+            for (word in words) {
+                if (current.isEmpty()) {
+                    current.append(word)
+                } else if (current.length + 1 + word.length <= maxLen) {
+                    current.append(" ").append(word)
+                } else {
+                    lines.add(current.toString())
+                    current = StringBuilder(word)
+                }
+            }
+            if (current.isNotEmpty()) {
+                lines.add(current.toString())
+            }
+            return if (lines.isEmpty()) listOf(text) else lines
         }
 
         fun line(): String = "-".repeat(width)
@@ -91,6 +117,22 @@ object EscPosPrinterHelper {
         }
 
         sb.appendLine(line())
+
+        // Custom Personalized Message for Customer
+        val effectiveNote = if (customReceiptNote.isNotBlank()) customReceiptNote else order.orderNote
+        if (effectiveNote.isNotBlank()) {
+            sb.appendLine(center("💌 PESAN UNTUK PELANGGAN 💌"))
+            effectiveNote.lines().forEach { noteLine ->
+                val trimmed = noteLine.trim()
+                if (trimmed.isNotBlank()) {
+                    wrapText(trimmed).forEach { wrappedLine ->
+                        sb.appendLine(center(wrappedLine))
+                    }
+                }
+            }
+            sb.appendLine(line())
+        }
+
         store.receiptFooter.lines().forEach { footLine ->
             sb.appendLine(center(footLine.trim()))
         }
@@ -102,13 +144,19 @@ object EscPosPrinterHelper {
     /**
      * Converts receipt to raw ESC/POS binary stream for Bluetooth thermal printers
      */
-    fun generateEscPosBytes(order: OrderEntity, items: List<CartItem>, store: StoreProfile, is80mm: Boolean = false): ByteArray {
+    fun generateEscPosBytes(
+        order: OrderEntity,
+        items: List<CartItem>,
+        store: StoreProfile,
+        is80mm: Boolean = false,
+        customReceiptNote: String = order.orderNote
+    ): ByteArray {
         val out = ByteArrayOutputStream()
 
         // Init printer
         out.write(byteArrayOf(ESC, 0x40))
 
-        val textBody = formatReceiptText(order, items, store, is80mm)
+        val textBody = formatReceiptText(order, items, store, is80mm, customReceiptNote)
         out.write(textBody.toByteArray(Charsets.ISO_8859_1))
 
         // Feed & Paper Cut (GS V 66 0)

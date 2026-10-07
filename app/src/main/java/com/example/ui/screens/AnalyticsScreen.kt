@@ -398,6 +398,9 @@ fun AnalyticsScreen(
                     RecentSalesContent(
                         recentSales = recentSales,
                         onExportClick = { showExportDialog = true },
+                        onPrintReceiptClick = { log ->
+                            viewModel.printReceiptForTransaction(log)
+                        },
                         modifier = Modifier.fillMaxSize()
                     )
                 }

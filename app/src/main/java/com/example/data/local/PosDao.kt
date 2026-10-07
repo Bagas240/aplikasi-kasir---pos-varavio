@@ -6,6 +6,8 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Update
+import com.example.data.model.Customer
+import com.example.data.model.CustomerDebt
 import com.example.data.model.OrderEntity
 import com.example.data.model.Product
 import com.example.data.model.PurchaseOrder
@@ -65,6 +67,9 @@ interface PosDao {
     @Query("SELECT * FROM orders WHERE orderId = :orderId LIMIT 1")
     suspend fun getOrderById(orderId: String): OrderEntity?
 
+    @Query("UPDATE orders SET orderNote = :note WHERE orderId = :orderId")
+    suspend fun updateOrderNote(orderId: String, note: String)
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertOrder(order: OrderEntity)
 
@@ -120,6 +125,9 @@ interface PosDao {
     @Query("SELECT * FROM transaction_logs WHERE orderId = :orderId LIMIT 1")
     suspend fun getTransactionLogByOrderId(orderId: String): TransactionLog?
 
+    @Query("UPDATE transaction_logs SET notes = :note WHERE orderId = :orderId")
+    suspend fun updateTransactionLogNotes(orderId: String, note: String)
+
     @Query("DELETE FROM transaction_logs WHERE id = :id")
     suspend fun deleteTransactionLog(id: Long)
 
@@ -167,4 +175,36 @@ interface PosDao {
     // TRANSACTIONS BY CASHIER
     @Query("SELECT * FROM transaction_logs WHERE cashierName = :cashierName ORDER BY timestamp DESC")
     fun getTransactionsByCashier(cashierName: String): Flow<List<TransactionLog>>
+
+    // CUSTOMERS (CRM)
+    @Query("SELECT * FROM customers ORDER BY name ASC")
+    fun getAllCustomers(): Flow<List<Customer>>
+
+    @Query("SELECT * FROM customers WHERE id = :id LIMIT 1")
+    suspend fun getCustomerById(id: Long): Customer?
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertCustomer(customer: Customer): Long
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertCustomers(customers: List<Customer>)
+
+    @Update
+    suspend fun updateCustomer(customer: Customer)
+
+    @Delete
+    suspend fun deleteCustomer(customer: Customer)
+
+    // CUSTOMER DEBTS
+    @Query("SELECT * FROM customer_debts WHERE customerId = :customerId ORDER BY createdAt DESC")
+    fun getDebtsByCustomer(customerId: Long): Flow<List<CustomerDebt>>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertDebt(debt: CustomerDebt): Long
+
+    @Update
+    suspend fun updateDebt(debt: CustomerDebt)
+
+    @Delete
+    suspend fun deleteDebt(debt: CustomerDebt)
 }
