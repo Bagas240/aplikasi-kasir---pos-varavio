@@ -37,7 +37,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Divider
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
@@ -401,7 +401,11 @@ fun RecentSaleItemCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column {
-                    val cashierSubtitle = if (log.cashierRole == "Admin Online" || log.cashierName == "Admin Online") "Pesanan Online" else "Kasir: ${log.cashierName}"
+                    val cashierSubtitle = when {
+                        log.cashierRole == "Admin Online" || log.cashierName == "Admin Online" -> "Pesanan Online"
+                        log.cashierRole == "Pelayan" -> "Pelayan: ${log.cashierName}"
+                        else -> "Kasir: ${log.cashierName}"
+                    }
                     Text(
                         text = "${log.customerName} • $cashierSubtitle",
                         fontSize = 11.sp,
@@ -447,7 +451,7 @@ fun RecentSaleItemCard(
                         .fillMaxWidth()
                         .padding(top = 8.dp)
                 ) {
-                    Divider(color = Color(0xFFE2E8F0))
+                    HorizontalDivider(color = Color(0xFFE2E8F0))
                     Spacer(modifier = Modifier.height(6.dp))
                     Row(
                         modifier = Modifier.fillMaxWidth(),

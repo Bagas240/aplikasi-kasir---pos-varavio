@@ -33,9 +33,9 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Divider
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedButton
@@ -101,18 +101,24 @@ fun ThermalReceiptDialog(
     }
 
     val isOnline = store.businessType == BusinessType.ONLINE
+    val isResto = store.businessType == BusinessType.RESTAURANT
 
-    val quickTemplates = remember(store.storeName, store.instagram, isOnline) {
-        if (isOnline) {
-            listOf(
+    val quickTemplates = remember(store.storeName, store.instagram, isOnline, isResto) {
+        when {
+            isOnline -> listOf(
                 "📦 Terima kasih sudah order di toko kami! Paket segera dikirim, mohon video unboxing ya kak ✨",
                 "💖 Semoga suka dengan pesanannya! Ditunggu repeat order berikutnya kak~",
                 "🚚 Paket dikemas dengan bubble wrap aman & rapi. Selamat sampai tujuan!",
                 "⭐ Jangan lupa review bintang 5 dan tag IG kami ya! Terima kasih banyak ❤️",
                 "🎁 Ada bonus spesial di dalam paket! Terima kasih telah mendukung olshop kami 🙏"
             )
-        } else {
-            listOf(
+            isResto -> listOf(
+                "🍽️ Selamat menikmati hidangan! Ditunggu kedatangannya kembali ✨",
+                "☕ Terima kasih sudah nongkrong & jajan di tempat kami! 😊",
+                if (store.wifiName.isNotBlank()) "📶 Free Wi-Fi: ${store.wifiName} (Pass: ${store.wifiPassword})" else "⭐ Jangan lupa tag IG kami ya! ❤️",
+                "🎉 Tunjukkan struk ini untuk promo spesial di kunjungan berikutnya!"
+            )
+            else -> listOf(
                 "Terima kasih banyak, semoga harinya menyenangkan! 😊",
                 "Selamat menikmati! Ditunggu kedatangannya kembali ya ✨",
                 "Tunjukkan struk ini untuk diskon 10% di kunjungan berikutnya! 🎉",
@@ -167,11 +173,16 @@ fun ThermalReceiptDialog(
                                 color = DarkSlate
                             )
                             Text(
-                                text = if (isOnline) {
-                                    val safeCust = if (order.customerName.isBlank() || order.customerName.contains("Walk-In", ignoreCase = true)) "Pelanggan Online" else order.customerName
-                                    "No: ${order.orderId} • Penerima: $safeCust"
-                                } else {
-                                    "No: ${order.orderId} • ${order.customerName}"
+                                text = when {
+                                    isOnline -> {
+                                        val safeCust = if (order.customerName.isBlank() || order.customerName.contains("Walk-In", ignoreCase = true)) "Pelanggan Online" else order.customerName
+                                        "No: ${order.orderId} • Penerima: $safeCust"
+                                    }
+                                    isResto -> {
+                                        val tableLabel = order.draftTag.ifBlank { "Dine-In" }
+                                        "No: ${order.orderId} • $tableLabel • ${order.customerName}"
+                                    }
+                                    else -> "No: ${order.orderId} • ${order.customerName}"
                                 },
                                 fontSize = 11.sp,
                                 color = Color(0xFF64748B)
@@ -393,7 +404,7 @@ fun ThermalReceiptDialog(
                         }
 
                         Spacer(modifier = Modifier.height(8.dp))
-                        Divider(color = Color(0xFF94A3B8), thickness = 1.dp)
+                        HorizontalDivider(color = Color(0xFF94A3B8), thickness = 1.dp)
                         Spacer(modifier = Modifier.height(8.dp))
 
                         // Receipt Details Monospace with custom message rendered live

@@ -274,14 +274,19 @@ data class TransactionLog(
 
 enum class BusinessType(val label: String, val shortLabel: String, val description: String) {
     OFFLINE(
-        label = "Usaha Offline (Toko Fisik / POS)",
-        shortLabel = "Toko Offline",
-        description = "Toko fisik dengan kasir langsung, laci uang tunai, shift kerja & struk kasir"
+        label = "Toko (Retail & Toko Fisik)",
+        shortLabel = "Toko",
+        description = "Toko fisik dengan kasir langsung, barcode scanner produk, laci uang & shift kasir"
     ),
     ONLINE(
-        label = "Usaha Online (Online Shop / Olshop)",
+        label = "Toko Online (Olshop / E-Commerce)",
         shortLabel = "Toko Online",
-        description = "Toko online / e-commerce, invoice digital, resi ekspedisi, tanpa kasir fisik & shift"
+        description = "Toko online, invoice digital, resi ekspedisi, tanpa kasir fisik & shift"
+    ),
+    RESTAURANT(
+        label = "Restoran atau Cafe (F&B)",
+        shortLabel = "Restoran / Cafe",
+        description = "Dine-in & takeaway, generate QR meja, pesanan per nomor meja, tanpa fitur barcode"
     )
 }
 
@@ -303,7 +308,10 @@ data class StoreProfile(
     val servicePercent: Double = 0.0,
     val serviceEnabled: Boolean = false,
     val printerPaperWidth: String = "58mm", // 58mm or 80mm
-    val loyaltyPointRate: Int = 1000 // 1 pt per Rp 1000
+    val loyaltyPointRate: Int = 1000, // 1 pt per Rp 1000
+    val wifiName: String = "",
+    val wifiPassword: String = "",
+    val totalTables: Int = 12
 )
 
 @Immutable

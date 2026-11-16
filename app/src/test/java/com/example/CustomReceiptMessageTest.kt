@@ -140,6 +140,15 @@ class CustomReceiptMessageTest {
         )
     }
 
+    private val sampleRestaurantStore = StoreProfile(
+        storeName = "VORAVIO CAFE & RESTO",
+        businessType = BusinessType.RESTAURANT,
+        address = "Jl. Kemang Raya No. 22",
+        phone = "081277788899",
+        totalTables = 10,
+        receiptFooter = "Selamat menikmati hidangan Anda!"
+    )
+
     @Test
     fun testOfflineReceiptRetainsCashierAndCustomer() {
         val receiptText = EscPosPrinterHelper.formatReceiptText(
@@ -153,6 +162,32 @@ class CustomReceiptMessageTest {
         assertFalse(
             "Struk offline tidak boleh memuat peringatan unboxing online",
             receiptText.contains("!!PERHATIAN JANGAN SAMPAI HILANG STRUK INI DAN SERTAKAN VIDEO UNBOXING KETIKA INGIN REFUND!!")
+        )
+    }
+
+    @Test
+    fun testRestaurantReceiptIncludesTableNumberAndWaiter() {
+        val restoOrder = sampleOrder.copy(
+            cashierName = "Rina",
+            cashierRole = "Pelayan",
+            customerName = "Meja 5 - Andi",
+            draftTag = "Meja 5"
+        )
+
+        val receiptText = EscPosPrinterHelper.formatReceiptText(
+            order = restoOrder,
+            items = sampleItems,
+            store = sampleRestaurantStore
+        )
+
+        assertTrue("Struk restoran harus menampilkan nomor meja", receiptText.contains("Nomor Meja  :"))
+        assertTrue("Struk restoran harus mencantumkan Meja 5", receiptText.contains("Meja 5"))
+        assertTrue("Struk restoran harus mencantumkan Pelayan", receiptText.contains("Pelayan     :"))
+        assertTrue("Struk restoran harus mencantumkan nama pelayan", receiptText.contains("Rina"))
+        assertTrue("Struk restoran harus mencantumkan nama tamu", receiptText.contains("Tamu        :"))
+        assertFalse(
+            "Struk restoran tidak boleh memuat peringatan unboxing online",
+            receiptText.contains("UNBOXING KETIKA INGIN REFUND")
         )
     }
 }

@@ -27,6 +27,7 @@ import androidx.compose.material.icons.filled.LockReset
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Pin
 import androidx.compose.material.icons.filled.PointOfSale
+import androidx.compose.material.icons.filled.Restaurant
 import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Storefront
 import androidx.compose.material.icons.filled.Visibility
@@ -415,9 +416,9 @@ fun AuthScreen(
 
                         Row(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            // Card Opsi Offline
+                            // Card Opsi Toko (Offline)
                             val isOfflineSelected = setupBusinessType == BusinessType.OFFLINE
                             Card(
                                 onClick = { setupBusinessType = BusinessType.OFFLINE },
@@ -434,7 +435,7 @@ fun AuthScreen(
                                 ),
                                 shape = RoundedCornerShape(12.dp)
                             ) {
-                                Column(modifier = Modifier.padding(12.dp)) {
+                                Column(modifier = Modifier.padding(10.dp)) {
                                     Row(
                                         verticalAlignment = Alignment.CenterVertically,
                                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -444,7 +445,7 @@ fun AuthScreen(
                                             Icons.Default.Storefront,
                                             contentDescription = null,
                                             tint = if (isOfflineSelected) DeepRoyalBlue else Color(0xFF64748B),
-                                            modifier = Modifier.size(24.dp)
+                                            modifier = Modifier.size(22.dp)
                                         )
                                         if (isOfflineSelected) {
                                             Icon(
@@ -455,18 +456,18 @@ fun AuthScreen(
                                             )
                                         }
                                     }
-                                    Spacer(modifier = Modifier.height(8.dp))
+                                    Spacer(modifier = Modifier.height(6.dp))
                                     Text(
-                                        text = "Usaha Offline",
+                                        text = "Toko",
                                         fontWeight = FontWeight.Bold,
-                                        fontSize = 13.sp,
+                                        fontSize = 12.sp,
                                         color = if (isOfflineSelected) DeepRoyalBlue else DarkSlate
                                     )
                                     Text(
-                                        text = "Toko fisik, kasir langsung, shift kerja, laci kasir & cetak struk",
-                                        fontSize = 10.sp,
+                                        text = "Retail, kasir fisik, barcode & shift",
+                                        fontSize = 9.sp,
                                         color = Color(0xFF64748B),
-                                        lineHeight = 13.sp
+                                        lineHeight = 12.sp
                                     )
                                 }
                             }
@@ -488,7 +489,7 @@ fun AuthScreen(
                                 ),
                                 shape = RoundedCornerShape(12.dp)
                             ) {
-                                Column(modifier = Modifier.padding(12.dp)) {
+                                Column(modifier = Modifier.padding(10.dp)) {
                                     Row(
                                         verticalAlignment = Alignment.CenterVertically,
                                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -498,7 +499,7 @@ fun AuthScreen(
                                             Icons.Default.Language,
                                             contentDescription = null,
                                             tint = if (isOnlineSelected) EmeraldGreen else Color(0xFF64748B),
-                                            modifier = Modifier.size(24.dp)
+                                            modifier = Modifier.size(22.dp)
                                         )
                                         if (isOnlineSelected) {
                                             Icon(
@@ -509,18 +510,72 @@ fun AuthScreen(
                                             )
                                         }
                                     }
-                                    Spacer(modifier = Modifier.height(8.dp))
+                                    Spacer(modifier = Modifier.height(6.dp))
                                     Text(
-                                        text = "Usaha Online",
+                                        text = "Toko Online",
                                         fontWeight = FontWeight.Bold,
-                                        fontSize = 13.sp,
+                                        fontSize = 12.sp,
                                         color = if (isOnlineSelected) EmeraldGreen else DarkSlate
                                     )
                                     Text(
-                                        text = "Online shop / olshop, resi ekspedisi, nota kiriman, tanpa kasir fisik & shift",
-                                        fontSize = 10.sp,
+                                        text = "Olshop, resi kurir, tanpa kasir fisik",
+                                        fontSize = 9.sp,
                                         color = Color(0xFF64748B),
-                                        lineHeight = 13.sp
+                                        lineHeight = 12.sp
+                                    )
+                                }
+                            }
+
+                            // Card Opsi Restoran / Cafe
+                            val isRestoSelected = setupBusinessType == BusinessType.RESTAURANT
+                            Card(
+                                onClick = { setupBusinessType = BusinessType.RESTAURANT },
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .border(
+                                        width = if (isRestoSelected) 2.dp else 1.dp,
+                                        color = if (isRestoSelected) Color(0xFFD97706) else Color(0xFFCBD5E1),
+                                        shape = RoundedCornerShape(12.dp)
+                                    )
+                                    .testTag("business_type_resto_card"),
+                                colors = CardDefaults.cardColors(
+                                    containerColor = if (isRestoSelected) Color(0xFFFFFBEB) else CrispWhite
+                                ),
+                                shape = RoundedCornerShape(12.dp)
+                            ) {
+                                Column(modifier = Modifier.padding(10.dp)) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Icon(
+                                            Icons.Default.Restaurant,
+                                            contentDescription = null,
+                                            tint = if (isRestoSelected) Color(0xFFD97706) else Color(0xFF64748B),
+                                            modifier = Modifier.size(22.dp)
+                                        )
+                                        if (isRestoSelected) {
+                                            Icon(
+                                                Icons.Default.Check,
+                                                contentDescription = null,
+                                                tint = Color(0xFFD97706),
+                                                modifier = Modifier.size(16.dp)
+                                            )
+                                        }
+                                    }
+                                    Spacer(modifier = Modifier.height(6.dp))
+                                    Text(
+                                        text = "Resto / Cafe",
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 12.sp,
+                                        color = if (isRestoSelected) Color(0xFFD97706) else DarkSlate
+                                    )
+                                    Text(
+                                        text = "Meja makan & QR order meja",
+                                        fontSize = 9.sp,
+                                        color = Color(0xFF64748B),
+                                        lineHeight = 12.sp
                                     )
                                 }
                             }

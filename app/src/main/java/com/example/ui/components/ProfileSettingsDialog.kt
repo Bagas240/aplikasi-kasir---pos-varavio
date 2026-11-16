@@ -43,6 +43,7 @@ import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material.icons.filled.Print
 import androidx.compose.material.icons.filled.QrCode
+import androidx.compose.material.icons.filled.Restaurant
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Store
@@ -130,6 +131,9 @@ fun ProfileSettingsDialog(
     var receiptHeader by remember { mutableStateOf(storeProfile.receiptHeader) }
     var receiptFooter by remember { mutableStateOf(storeProfile.receiptFooter) }
     var printerPaperWidth by remember { mutableStateOf(storeProfile.printerPaperWidth) }
+    var wifiName by remember { mutableStateOf(storeProfile.wifiName) }
+    var wifiPassword by remember { mutableStateOf(storeProfile.wifiPassword) }
+    var totalTablesInput by remember { mutableStateOf(storeProfile.totalTables.toString()) }
 
     // Dialog state for Staff Management
     var showAddStaffDialog by remember { mutableStateOf(false) }
@@ -233,14 +237,19 @@ fun ProfileSettingsDialog(
                 }
 
                 // Tabs Navigation
-                val tabs = if (businessType == BusinessType.ONLINE) {
-                    listOf(
+                val tabs = when (businessType) {
+                    BusinessType.ONLINE -> listOf(
                         Triple(0, "Toko Online", Icons.Default.Store),
                         Triple(1, "Foto QRIS / Rekening", Icons.Default.QrCode),
                         Triple(2, "Admin & CS", Icons.Default.People)
                     )
-                } else {
-                    listOf(
+                    BusinessType.RESTAURANT -> listOf(
+                        Triple(0, "Resto & Meja", Icons.Default.Restaurant),
+                        Triple(1, "Foto QRIS", Icons.Default.QrCode),
+                        Triple(2, "Pelayan & Kasir", Icons.Default.People),
+                        Triple(3, "Jadwal Shift", Icons.Default.Schedule)
+                    )
+                    BusinessType.OFFLINE -> listOf(
                         Triple(0, "Toko & Bisnis", Icons.Default.Store),
                         Triple(1, "Foto QRIS", Icons.Default.QrCode),
                         Triple(2, "Kasir", Icons.Default.People),
@@ -374,7 +383,7 @@ fun ProfileSettingsDialog(
                                         Spacer(modifier = Modifier.height(6.dp))
                                         Row(
                                             modifier = Modifier.fillMaxWidth(),
-                                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                            horizontalArrangement = Arrangement.spacedBy(6.dp)
                                         ) {
                                             val isOffline = businessType == BusinessType.OFFLINE
                                             Box(
@@ -387,15 +396,15 @@ fun ProfileSettingsDialog(
                                                         businessType = BusinessType.OFFLINE
                                                         receiptHeader = "STRUK PEMBELIAN RESMI"
                                                     }
-                                                    .padding(10.dp)
+                                                    .padding(8.dp)
                                             ) {
                                                 Column {
                                                     Row(verticalAlignment = Alignment.CenterVertically) {
-                                                        Icon(Icons.Default.Storefront, contentDescription = null, tint = if (isOffline) DeepRoyalBlue else Color(0xFF64748B), modifier = Modifier.size(16.dp))
-                                                        Spacer(modifier = Modifier.width(6.dp))
-                                                        Text("Usaha Offline", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = if (isOffline) DeepRoyalBlue else DarkSlate)
+                                                        Icon(Icons.Default.Storefront, contentDescription = null, tint = if (isOffline) DeepRoyalBlue else Color(0xFF64748B), modifier = Modifier.size(14.dp))
+                                                        Spacer(modifier = Modifier.width(4.dp))
+                                                        Text("Toko", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = if (isOffline) DeepRoyalBlue else DarkSlate)
                                                     }
-                                                    Text("Kasir fisik & cetak struk", fontSize = 10.sp, color = Color(0xFF64748B))
+                                                    Text("Kasir fisik & retail", fontSize = 9.sp, color = Color(0xFF64748B))
                                                 }
                                             }
 
@@ -410,15 +419,38 @@ fun ProfileSettingsDialog(
                                                         businessType = BusinessType.ONLINE
                                                         receiptHeader = "INVOICE / NOTA PESANAN ONLINE"
                                                     }
-                                                    .padding(10.dp)
+                                                    .padding(8.dp)
                                             ) {
                                                 Column {
                                                     Row(verticalAlignment = Alignment.CenterVertically) {
-                                                        Icon(Icons.Default.Language, contentDescription = null, tint = if (isOnline) EmeraldGreen else Color(0xFF64748B), modifier = Modifier.size(16.dp))
-                                                        Spacer(modifier = Modifier.width(6.dp))
-                                                        Text("Usaha Online", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = if (isOnline) EmeraldGreen else DarkSlate)
+                                                        Icon(Icons.Default.Language, contentDescription = null, tint = if (isOnline) EmeraldGreen else Color(0xFF64748B), modifier = Modifier.size(14.dp))
+                                                        Spacer(modifier = Modifier.width(4.dp))
+                                                        Text("Online", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = if (isOnline) EmeraldGreen else DarkSlate)
                                                     }
-                                                    Text("Olshop, resi & tanpa kasir fisik", fontSize = 10.sp, color = Color(0xFF64748B))
+                                                    Text("Olshop & ekspedisi", fontSize = 9.sp, color = Color(0xFF64748B))
+                                                }
+                                            }
+
+                                            val isResto = businessType == BusinessType.RESTAURANT
+                                            Box(
+                                                modifier = Modifier
+                                                    .weight(1f)
+                                                    .clip(RoundedCornerShape(8.dp))
+                                                    .border(1.dp, if (isResto) Color(0xFFD97706) else Color(0xFFCBD5E1), RoundedCornerShape(8.dp))
+                                                    .background(if (isResto) Color(0xFFFFFBEB) else CrispWhite)
+                                                    .clickable {
+                                                        businessType = BusinessType.RESTAURANT
+                                                        receiptHeader = "STRUK PESANAN RESTORAN"
+                                                    }
+                                                    .padding(8.dp)
+                                            ) {
+                                                Column {
+                                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                                        Icon(Icons.Default.Restaurant, contentDescription = null, tint = if (isResto) Color(0xFFD97706) else Color(0xFF64748B), modifier = Modifier.size(14.dp))
+                                                        Spacer(modifier = Modifier.width(4.dp))
+                                                        Text("Resto/Cafe", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = if (isResto) Color(0xFFD97706) else DarkSlate)
+                                                    }
+                                                    Text("Meja & QR order", fontSize = 9.sp, color = Color(0xFF64748B))
                                                 }
                                             }
                                         }
@@ -460,14 +492,67 @@ fun ProfileSettingsDialog(
                                             )
                                         }
 
+                                        if (businessType == BusinessType.RESTAURANT) {
+                                            Spacer(modifier = Modifier.height(10.dp))
+                                            Text("Pengaturan Restoran / Cafe:", fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = DarkSlate)
+                                            Spacer(modifier = Modifier.height(6.dp))
+                                            OutlinedTextField(
+                                                value = totalTablesInput,
+                                                onValueChange = { input -> totalTablesInput = input.filter { it.isDigit() } },
+                                                label = { Text("Jumlah Meja (1 - 50)") },
+                                                placeholder = { Text("12") },
+                                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                                singleLine = true,
+                                                modifier = Modifier.fillMaxWidth()
+                                            )
+                                            Spacer(modifier = Modifier.height(8.dp))
+                                            Row(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                            ) {
+                                                OutlinedTextField(
+                                                    value = wifiName,
+                                                    onValueChange = { wifiName = it },
+                                                    label = { Text("Nama Wi-Fi (Opsional)") },
+                                                    placeholder = { Text("Guest Cafe") },
+                                                    singleLine = true,
+                                                    modifier = Modifier.weight(1f)
+                                                )
+                                                OutlinedTextField(
+                                                    value = wifiPassword,
+                                                    onValueChange = { wifiPassword = it },
+                                                    label = { Text("Password Wi-Fi") },
+                                                    placeholder = { Text("kopienak") },
+                                                    singleLine = true,
+                                                    modifier = Modifier.weight(1f)
+                                                )
+                                            }
+                                        }
+
                                         Spacer(modifier = Modifier.height(10.dp))
 
                                         // Store Name
                                         OutlinedTextField(
                                             value = storeName,
                                             onValueChange = { storeName = it },
-                                            label = { Text(if (businessType == BusinessType.ONLINE) "Nama Toko Online" else "Nama Toko") },
-                                            placeholder = { Text(if (businessType == BusinessType.ONLINE) "Contoh: Bella Fashion Online Shop" else "Contoh: VORAVIO MART") },
+                                            label = {
+                                                Text(
+                                                    when (businessType) {
+                                                        BusinessType.ONLINE -> "Nama Toko Online"
+                                                        BusinessType.RESTAURANT -> "Nama Restoran / Cafe"
+                                                        BusinessType.OFFLINE -> "Nama Toko"
+                                                    }
+                                                )
+                                            },
+                                            placeholder = {
+                                                Text(
+                                                    when (businessType) {
+                                                        BusinessType.ONLINE -> "Contoh: Bella Fashion Online Shop"
+                                                        BusinessType.RESTAURANT -> "Contoh: Kopi Voravio & Eatery"
+                                                        BusinessType.OFFLINE -> "Contoh: VORAVIO MART"
+                                                    }
+                                                )
+                                            },
                                             singleLine = true,
                                             modifier = Modifier.fillMaxWidth()
                                         )
@@ -528,6 +613,7 @@ fun ProfileSettingsDialog(
 
                                         Button(
                                             onClick = {
+                                                val parsedTables = (totalTablesInput.toIntOrNull() ?: 12).coerceIn(1, 50)
                                                 val updated = storeProfile.copy(
                                                     storeName = storeName.trim(),
                                                     businessType = businessType,
@@ -536,20 +622,17 @@ fun ProfileSettingsDialog(
                                                     address = storeAddress.trim(),
                                                     phone = storePhone.trim(),
                                                     logoUri = storeLogoUri,
-                                                    receiptHeader = if (businessType == BusinessType.ONLINE) "INVOICE / NOTA PESANAN ONLINE" else "STRUK PEMBELIAN RESMI",
+                                                    wifiName = wifiName.trim(),
+                                                    wifiPassword = wifiPassword.trim(),
+                                                    totalTables = parsedTables,
+                                                    receiptHeader = when (businessType) {
+                                                        BusinessType.ONLINE -> "INVOICE / NOTA PESANAN ONLINE"
+                                                        BusinessType.RESTAURANT -> "STRUK PESANAN RESTORAN"
+                                                        BusinessType.OFFLINE -> "STRUK PEMBELIAN RESMI"
+                                                    },
                                                     printerPaperWidth = printerPaperWidth
                                                 )
                                                 viewModel.updateStoreProfile(updated)
-                                                authPreferences.saveStoreProfile(
-                                                    name = storeName.trim(),
-                                                    address = storeAddress.trim(),
-                                                    phone = storePhone.trim(),
-                                                    logoUri = storeLogoUri,
-                                                    qrisUri = storeQrisUri,
-                                                    type = businessType,
-                                                    onlineLink = onlineStoreLink,
-                                                    courier = defaultCourier
-                                                )
                                                 Toast.makeText(context, "Profil toko (${businessType.shortLabel}) berhasil disimpan!", Toast.LENGTH_SHORT).show()
                                             },
                                             colors = ButtonDefaults.buttonColors(containerColor = DeepRoyalBlue, contentColor = CrispWhite),

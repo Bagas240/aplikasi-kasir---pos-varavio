@@ -39,6 +39,9 @@ import androidx.compose.material.icons.filled.People
 import androidx.compose.material.icons.filled.PointOfSale
 import androidx.compose.material.icons.filled.QrCode
 import androidx.compose.material.icons.filled.ReceiptLong
+import androidx.compose.material.icons.filled.Language
+import androidx.compose.material.icons.filled.Restaurant
+import androidx.compose.material.icons.filled.RestaurantMenu
 import androidx.compose.material.icons.filled.ShoppingBag
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material.icons.filled.Store
@@ -149,18 +152,7 @@ fun PosMasterApp(viewModel: PosViewModel = viewModel()) {
     // Synchronize stored preferences on launch
     LaunchedEffect(Unit) {
         if (authPreferences.storeName.isNotBlank()) {
-            viewModel.updateStoreProfile(
-                storeProfile.copy(
-                    storeName = authPreferences.storeName,
-                    address = authPreferences.storeAddress,
-                    phone = authPreferences.storePhone,
-                    logoUri = authPreferences.storeLogoUri,
-                    qrisImageUri = authPreferences.storeQrisImageUri,
-                    businessType = authPreferences.businessType,
-                    onlineStoreLink = authPreferences.onlineStoreLink,
-                    defaultCourier = authPreferences.defaultCourier
-                )
-            )
+            viewModel.updateStoreProfile(authPreferences.getStoreProfile())
         }
         if (authPreferences.fullName.isNotBlank()) {
             viewModel.switchUser(
@@ -220,6 +212,7 @@ fun PosMasterApp(viewModel: PosViewModel = viewModel()) {
         }
         OnboardingPhase.TUTORIAL -> {
             GuidedOnboardingScreen(
+                businessType = storeProfile.businessType,
                 onCompleteTutorial = { targetTab ->
                     authPreferences.onboardingPhase = OnboardingPhase.COMPLETED
                     onboardingPhase = OnboardingPhase.COMPLETED
@@ -239,23 +232,32 @@ fun PosMasterApp(viewModel: PosViewModel = viewModel()) {
             }
 
             val isOnline = storeProfile.businessType == BusinessType.ONLINE
+            val isResto = storeProfile.businessType == BusinessType.RESTAURANT
+
             LaunchedEffect(isOnline) {
                 if (isOnline && currentTab == PosTab.SHIFT) {
                     viewModel.setTab(PosTab.CASHIER)
                 }
             }
 
-            val navItems = remember(isOnline) {
-                if (isOnline) {
-                    listOf(
+            val navItems = remember(storeProfile.businessType) {
+                when (storeProfile.businessType) {
+                    BusinessType.ONLINE -> listOf(
                         Triple(PosTab.CASHIER, "Pesanan", Icons.Default.ShoppingCart),
                         Triple(PosTab.BARCODE_ENGINE, "Resi & Scan", Icons.Default.QrCode),
                         Triple(PosTab.CATALOG, "Produk", Icons.Default.ShoppingBag),
                         Triple(PosTab.INVENTORY, "Stok", Icons.Default.Inventory2),
                         Triple(PosTab.ANALYTICS, "Laporan", Icons.Default.Assessment)
                     )
-                } else {
-                    listOf(
+                    BusinessType.RESTAURANT -> listOf(
+                        Triple(PosTab.CASHIER, "Kasir", Icons.Default.Restaurant),
+                        Triple(PosTab.BARCODE_ENGINE, "QR Meja", Icons.Default.QrCode),
+                        Triple(PosTab.CATALOG, "Menu", Icons.Default.RestaurantMenu),
+                        Triple(PosTab.INVENTORY, "Stok", Icons.Default.Inventory2),
+                        Triple(PosTab.SHIFT, "Shift", Icons.Default.AccountBalanceWallet),
+                        Triple(PosTab.ANALYTICS, "Laporan", Icons.Default.Assessment)
+                    )
+                    BusinessType.OFFLINE -> listOf(
                         Triple(PosTab.CASHIER, "Kasir", Icons.Default.PointOfSale),
                         Triple(PosTab.BARCODE_ENGINE, "Barcode", Icons.Default.QrCode),
                         Triple(PosTab.CATALOG, "Produk", Icons.Default.ShoppingBag),
@@ -356,9 +358,14 @@ fun PosMasterApp(viewModel: PosViewModel = viewModel()) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     VoravioLogo(size = 26.dp, onDarkBackground = true)
                                     Spacer(modifier = Modifier.width(8.dp))
+                                    val modeTitle = when (storeProfile.businessType) {
+                                        BusinessType.RESTAURANT -> "Voravio Resto & Cafe"
+                                        BusinessType.ONLINE -> "Voravio Olshop"
+                                        BusinessType.OFFLINE -> "Voravio POS"
+                                    }
                                     Text(
-                                        text = if (isOnline) "Voravio Olshop" else "Voravio POS",
-                                        fontWeight = FontWeight.ExtraBold,
+                                        text = modeTitle,
+                                        fontWeight = FontWeight.Bold,
                                         fontSize = 15.sp,
                                         color = CrispWhite
                                     )
@@ -375,13 +382,18 @@ fun PosMasterApp(viewModel: PosViewModel = viewModel()) {
                                         modifier = Modifier
                                             .size(7.dp)
                                             .background(
-                                                if (isOnline || activeShift != null) EmeraldGreen else Color(0xFFF87171),
+                                                if (isOnline || isResto || activeShift != null) EmeraldGreen else Color(0xFFF87171),
                                                 CircleShape
                                             )
                                     )
                                     Spacer(modifier = Modifier.width(5.dp))
+                                    val statusText = when {
+                                        isOnline -> "Mode Online"
+                                        isResto -> if (activeShift != null) "Shift: ${activeShift.cashierName}" else "Mode Resto Aktif"
+                                        else -> if (activeShift != null) "Shift Aktif" else "Shift Tutup"
+                                    }
                                     Text(
-                                        text = if (isOnline) "Mode Online Aktif" else if (activeShift != null) "Shift Aktif" else "Shift Tutup",
+                                        text = statusText,
                                         fontSize = 11.sp,
                                         color = CrispWhite.copy(alpha = 0.9f)
                                     )
@@ -450,80 +462,51 @@ fun PosMasterApp(viewModel: PosViewModel = viewModel()) {
                             title = {
                                 Row(
                                     verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    modifier = Modifier.fillMaxWidth().padding(end = 6.dp)
+                                    modifier = Modifier.fillMaxWidth()
                                 ) {
-                                    Row(
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        modifier = Modifier.weight(1f, fill = false)
-                                    ) {
-                                        VoravioLogo(size = 34.dp, onDarkBackground = true)
-                                        Spacer(modifier = Modifier.width(9.dp))
-                                        Column {
-                                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                                Text(
-                                                    text = if (isOnline) "ORDER ONLINE" else "Voravio POS",
-                                                    fontWeight = FontWeight.ExtraBold,
-                                                    fontSize = 16.sp,
-                                                    color = CrispWhite
-                                                )
-                                                Text(
-                                                    text = " • ${storeProfile.storeName}",
-                                                    fontWeight = FontWeight.Medium,
-                                                    fontSize = 12.sp,
-                                                    color = CrispWhite.copy(alpha = 0.85f),
-                                                    maxLines = 1,
-                                                    overflow = TextOverflow.Ellipsis
-                                                )
+                                    VoravioLogo(size = 30.dp, onDarkBackground = true)
+                                    Spacer(modifier = Modifier.width(10.dp))
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            text = storeProfile.storeName.ifBlank { "Voravio POS" },
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 15.sp,
+                                            color = CrispWhite,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Box(
+                                                modifier = Modifier
+                                                    .size(6.dp)
+                                                    .background(
+                                                        if (isOnline || isResto || activeShift != null) EmeraldGreen else Color(0xFFF87171),
+                                                        CircleShape
+                                                    )
+                                            )
+                                            Spacer(modifier = Modifier.width(5.dp))
+                                            val mobileStatus = when {
+                                                isOnline -> "Mode Toko Online"
+                                                isResto -> if (activeShift != null) "Resto • ${activeShift.cashierName}" else "Mode Restoran"
+                                                else -> if (activeShift != null) "Toko • ${activeShift.cashierName}" else "Mode Toko • Shift Tutup"
                                             }
-                                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                                Box(
-                                                    modifier = Modifier
-                                                        .size(7.dp)
-                                                        .background(
-                                                            if (isOnline || activeShift != null) EmeraldGreen else Color(0xFFF87171),
-                                                            CircleShape
-                                                        )
-                                                )
-                                                Spacer(modifier = Modifier.width(5.dp))
-                                                Text(
-                                                    text = if (isOnline) "Mode Online Aktif" else if (activeShift != null) "Shift: ${activeShift.cashierName}" else "Shift: Kasir Tutup",
-                                                    fontSize = 11.sp,
-                                                    color = CrispWhite.copy(alpha = 0.85f)
-                                                )
-                                            }
+                                            Text(
+                                                text = mobileStatus,
+                                                fontSize = 11.sp,
+                                                color = CrispWhite.copy(alpha = 0.85f),
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis
+                                            )
                                         }
                                     }
-
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        IconButton(
-                                            onClick = { onboardingPhase = OnboardingPhase.TUTORIAL },
-                                            modifier = Modifier.size(34.dp)
-                                        ) {
-                                            Icon(Icons.Default.HelpOutline, contentDescription = "Panduan", tint = CrispWhite, modifier = Modifier.size(20.dp))
-                                        }
-
-                                        Surface(
-                                            onClick = { showProfileSettingsDialog = true },
-                                            shape = RoundedCornerShape(20.dp),
-                                            color = CrispWhite.copy(alpha = 0.2f),
-                                            modifier = Modifier.padding(start = 4.dp)
-                                        ) {
-                                            Row(
-                                                verticalAlignment = Alignment.CenterVertically,
-                                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
-                                            ) {
-                                                Icon(Icons.Default.Store, contentDescription = null, tint = CrispWhite, modifier = Modifier.size(16.dp))
-                                                Spacer(modifier = Modifier.width(5.dp))
-                                                Text(
-                                                    text = "Pengaturan",
-                                                    color = CrispWhite,
-                                                    fontSize = 12.sp,
-                                                    fontWeight = FontWeight.SemiBold
-                                                )
-                                            }
-                                        }
-                                    }
+                                }
+                            },
+                            actions = {
+                                IconButton(onClick = { onboardingPhase = OnboardingPhase.TUTORIAL }) {
+                                    Icon(Icons.Default.HelpOutline, contentDescription = "Panduan", tint = CrispWhite)
+                                }
+                                IconButton(onClick = { showProfileSettingsDialog = true }) {
+                                    Icon(Icons.Default.Store, contentDescription = "Pengaturan Toko", tint = CrispWhite)
                                 }
                             },
                             colors = TopAppBarDefaults.topAppBarColors(
@@ -537,8 +520,7 @@ fun PosMasterApp(viewModel: PosViewModel = viewModel()) {
                     bottomBar = {
                         NavigationBar(
                             containerColor = CrispWhite,
-                            tonalElevation = 8.dp,
-                            modifier = Modifier.height(64.dp)
+                            tonalElevation = 2.dp
                         ) {
                             navItems.forEach { (tab, label, icon) ->
                                 val isSelected = currentTab == tab

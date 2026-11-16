@@ -63,6 +63,7 @@ object EscPosPrinterHelper {
         }
 
         val isOnline = store.businessType == BusinessType.ONLINE
+        val isResto = store.businessType == BusinessType.RESTAURANT
 
         sb.appendLine(doubleLine())
         sb.appendLine(center(store.storeName))
@@ -71,6 +72,10 @@ object EscPosPrinterHelper {
             if (store.onlineStoreLink.isNotBlank()) sb.appendLine(center("Web: ${store.onlineStoreLink}"))
             if (store.instagram.isNotBlank()) sb.appendLine(center("IG: ${store.instagram}"))
             if (store.phone.isNotBlank()) sb.appendLine(center("WA: ${store.phone}"))
+        } else if (isResto) {
+            sb.appendLine(center("STRUK PESANAN RESTORAN & CAFE"))
+            if (store.address.isNotBlank()) sb.appendLine(center(store.address))
+            if (store.phone.isNotBlank()) sb.appendLine(center("Telp: ${store.phone}"))
         } else {
             if (store.address.isNotBlank()) sb.appendLine(center(store.address))
             if (store.phone.isNotBlank()) sb.appendLine(center("Telp: ${store.phone}"))
@@ -101,6 +106,16 @@ object EscPosPrinterHelper {
                 wrapText(order.shippingAddress).forEach { wrapped ->
                     sb.appendLine("  $wrapped")
                 }
+            }
+        } else if (isResto) {
+            // RESTAURANT / CAFE: Table number, server/cashier, dine-in
+            sb.appendLine(twoCols("No. Pesanan :", order.orderId))
+            sb.appendLine(twoCols("Waktu       :", CurrencyFormatter.formatDate(order.timestamp)))
+            val tableTag = if (order.draftTag.isNotBlank()) order.draftTag else "Meja 1"
+            sb.appendLine(twoCols("Nomor Meja  :", tableTag))
+            sb.appendLine(twoCols("Pelayan     :", order.cashierName))
+            if (order.customerName.isNotBlank() && !order.customerName.contains("Walk-In", ignoreCase = true)) {
+                sb.appendLine(twoCols("Tamu        :", order.customerName))
             }
         } else {
             // OFFLINE STORE: Physical cashier & shift

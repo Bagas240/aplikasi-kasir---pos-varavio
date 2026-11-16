@@ -241,6 +241,7 @@ object PosPrinterManager {
         val effectiveNote = if (customReceiptNote.isNotBlank()) customReceiptNote else order.orderNote
         val noteLinesCount = if (effectiveNote.isNotBlank()) effectiveNote.lines().size + 2 else 0
         val isOnline = store.businessType == BusinessType.ONLINE
+        val isResto = store.businessType == BusinessType.RESTAURANT
         val estimatedLines = 28 + (items.size * 3) + store.receiptFooter.lines().size + noteLinesCount + (if (isOnline) 10 else 0)
         val heightPx = estimatedLines * 24 + 180
 
@@ -267,6 +268,17 @@ object PosPrinterManager {
             }
             if (store.phone.isNotBlank()) {
                 canvas.drawText("WA: ${store.phone}", centerX, y, headerPaint)
+                y += 18f
+            }
+        } else if (isResto) {
+            canvas.drawText("STRUK PESANAN RESTORAN & CAFE", centerX, y, headerPaint)
+            y += 18f
+            if (store.address.isNotBlank()) {
+                canvas.drawText(store.address, centerX, y, headerPaint)
+                y += 18f
+            }
+            if (store.phone.isNotBlank()) {
+                canvas.drawText("Telp: ${store.phone}", centerX, y, headerPaint)
                 y += 18f
             }
         } else {
@@ -316,6 +328,15 @@ object PosPrinterManager {
             if (order.shippingAddress.isNotBlank()) {
                 canvas.drawText("Alamat Kirim: ${order.shippingAddress.take(40)}", padding.toFloat(), y, textPaint)
                 y += 18f
+            }
+        } else if (isResto) {
+            drawTwoColumns("No. Pesanan :", order.orderId)
+            drawTwoColumns("Waktu       :", CurrencyFormatter.formatDate(order.timestamp))
+            val tableTag = if (order.draftTag.isNotBlank()) order.draftTag else "Meja 1"
+            drawTwoColumns("Nomor Meja  :", tableTag, boldPaint)
+            drawTwoColumns("Pelayan     :", order.cashierName)
+            if (order.customerName.isNotBlank() && !order.customerName.contains("Walk-In", ignoreCase = true)) {
+                drawTwoColumns("Tamu        :", order.customerName)
             }
         } else {
             drawTwoColumns("No. Struk :", order.orderId)
@@ -469,6 +490,8 @@ object PosPrinterManager {
             store.receiptFooter
         } else if (isOnline) {
             "Terima kasih telah berbelanja online!\nKepuasan Anda adalah prioritas kami 🙏"
+        } else if (isResto) {
+            "Terima kasih atas kunjungan Anda!\nSelamat menikmati hidangan kami."
         } else {
             "Terima kasih atas kunjungan Anda!\nBarang yang sudah dibeli tidak dapat ditukar."
         }
@@ -637,5 +660,106 @@ object PosPrinterManager {
     ): Uri? {
         val bitmap = renderReceiptBitmap(context, order, items, store, is80mm, customReceiptNote)
         return saveBitmapToDevice(context, bitmap, "struk_${order.orderId}")
+    }
+
+    /**
+     * Renders a clean minimalist Table QR Stand card as a printable Bitmap.
+     */
+    fun renderTableQrCardBitmap(
+        store: StoreProfile,
+        tableName: String,
+        qrPayload: String
+    ): Bitmap {
+        val widthPx = 600
+        val heightPx = 820
+        val bitmap = Bitmap.createBitmap(widthPx, heightPx, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(bitmap)
+        canvas.drawColor(Color.WHITE)
+
+        val borderPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = 0xFFCBD5E1.toInt()
+            style = Paint.Style.STROKE
+            strokeWidth = 4f
+        }
+        canvas.drawRoundRect(16f, 16f, widthPx - 16f, heightPx - 16f, 24f, 24f, borderPaint)
+
+        val storePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = 0xFF1D4ED8.toInt()
+            textSize = 24f
+            typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+            textAlign = Paint.Align.CENTER
+        }
+        val tablePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = 0xFF0F172A.toInt()
+            textSize = 54f
+            typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+            textAlign = Paint.Align.CENTER
+        }
+        val subtitlePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = 0xFF475569.toInt()
+            textSize = 20f
+            textAlign = Paint.Align.CENTER
+        }
+        val infoPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = 0xFF0F172A.toInt()
+            textSize = 18f
+            typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+            textAlign = Paint.Align.CENTER
+        }
+
+        val centerX = widthPx / 2f
+        var y = 80f
+
+        canvas.drawText(store.storeName.ifBlank { "RESTORAN & CAFE" }.uppercase(), centerX, y, storePaint)
+        y += 66f
+        canvas.drawText(tableName.uppercase(), centerX, y, tablePaint)
+        y += 34f
+        canvas.drawText("Scan QR untuk Lihat Menu & Pesan", centerX, y, subtitlePaint)
+        y += 34f
+
+        val qrSize = 380
+        val qrBitmap = BarcodeGenerator.generateBarcodeBitmapWithZxing(
+            contents = qrPayload,
+            format = com.google.zxing.BarcodeFormat.QR_CODE,
+            width = qrSize,
+            height = qrSize
+        )
+        canvas.drawBitmap(qrBitmap, (widthPx - qrSize) / 2f, y, null)
+        y += qrSize + 44f
+
+        canvas.drawText("Nomor Meja Terdeteksi Otomatis saat Order", centerX, y, subtitlePaint)
+        if (store.wifiName.isNotBlank()) {
+            y += 38f
+            val wifiText = if (store.wifiPassword.isNotBlank()) {
+                "Wi-Fi: ${store.wifiName}  |  Pass: ${store.wifiPassword}"
+            } else {
+                "Free Wi-Fi: ${store.wifiName}"
+            }
+            canvas.drawText(wifiText, centerX, y, infoPaint)
+        }
+
+        return bitmap
+    }
+
+    fun printTableQrStand(
+        context: Context,
+        store: StoreProfile,
+        tableName: String,
+        qrPayload: String
+    ) {
+        val bitmap = renderTableQrCardBitmap(store, tableName, qrPayload)
+        val safeName = tableName.replace(" ", "_")
+        printBitmap(context, "QR_$safeName", bitmap)
+    }
+
+    fun downloadTableQrStand(
+        context: Context,
+        store: StoreProfile,
+        tableName: String,
+        qrPayload: String
+    ): Uri? {
+        val bitmap = renderTableQrCardBitmap(store, tableName, qrPayload)
+        val safeName = tableName.lowercase().replace(" ", "_")
+        return saveBitmapToDevice(context, bitmap, "qr_$safeName")
     }
 }

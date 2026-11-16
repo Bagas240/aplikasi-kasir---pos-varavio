@@ -57,12 +57,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.data.model.BusinessType
 import com.example.data.model.Product
 import com.example.ui.PosViewModel
 import com.example.ui.components.A4StickerSheetPreview
 import com.example.ui.components.BarcodeDisplay
 import com.example.ui.components.BarcodeScannerView
 import com.example.ui.components.SingleBarcodeTagCanvas
+import com.example.ui.components.TableQrManagerView
 import com.example.ui.theme.CrispWhite
 import com.example.ui.theme.DarkSlate
 import com.example.ui.theme.DeepRoyalBlue
@@ -78,8 +80,15 @@ fun BarcodeCenterScreen(
     viewModel: PosViewModel,
     modifier: Modifier = Modifier
 ) {
-    val products by viewModel.products.collectAsStateWithLifecycle()
     val storeProfile by viewModel.storeProfile.collectAsStateWithLifecycle()
+
+    // If Restaurant / Cafe mode, barcode is replaced with Table QR Generator
+    if (storeProfile.businessType == BusinessType.RESTAURANT) {
+        TableQrManagerView(viewModel = viewModel, modifier = modifier)
+        return
+    }
+
+    val products by viewModel.products.collectAsStateWithLifecycle()
     val selectedProduct by viewModel.selectedProductForBarcode.collectAsStateWithLifecycle()
     val barcodeFormat by viewModel.barcodeFormat.collectAsStateWithLifecycle()
     val customBarcodeCode by viewModel.customBarcodeCode.collectAsStateWithLifecycle()

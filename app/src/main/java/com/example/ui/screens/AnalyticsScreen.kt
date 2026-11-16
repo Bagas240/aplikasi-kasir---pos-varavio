@@ -32,7 +32,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Divider
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.OutlinedButton
@@ -167,7 +167,7 @@ fun AnalyticsScreen(
                 containerColor = CrispWhite,
                 contentColor = DeepRoyalBlue,
                 indicator = { tabPositions ->
-                    TabRowDefaults.Indicator(
+                    TabRowDefaults.SecondaryIndicator(
                         Modifier.tabIndicatorOffset(tabPositions[activeTab]),
                         color = DeepRoyalBlue
                     )
@@ -385,7 +385,7 @@ fun AnalyticsScreen(
                                                 color = EmeraldDark
                                             )
                                         }
-                                        Divider(color = Color(0xFFF1F5F9))
+                                        HorizontalDivider(color = Color(0xFFF1F5F9))
                                     }
                                 }
                             }
@@ -407,14 +407,14 @@ fun AnalyticsScreen(
 
                 2 -> {
                     // Store & Printer Settings Form
-                    var storeName by remember { mutableStateOf(storeProfile.storeName) }
-                    var address by remember { mutableStateOf(storeProfile.address) }
-                    var phone by remember { mutableStateOf(storeProfile.phone) }
-                    var instagram by remember { mutableStateOf(storeProfile.instagram) }
-                    var taxPct by remember { mutableStateOf(storeProfile.taxPercent.toInt().toString()) }
-                    var servicePct by remember { mutableStateOf(storeProfile.servicePercent.toInt().toString()) }
-                    var footer by remember { mutableStateOf(storeProfile.receiptFooter) }
-                    var paperWidth by remember { mutableStateOf(storeProfile.printerPaperWidth) }
+                    var storeName by remember(storeProfile) { mutableStateOf(storeProfile.storeName) }
+                    var address by remember(storeProfile) { mutableStateOf(storeProfile.address) }
+                    var phone by remember(storeProfile) { mutableStateOf(storeProfile.phone) }
+                    var instagram by remember(storeProfile) { mutableStateOf(storeProfile.instagram) }
+                    var taxPct by remember(storeProfile) { mutableStateOf(storeProfile.taxPercent.toInt().toString()) }
+                    var servicePct by remember(storeProfile) { mutableStateOf(storeProfile.servicePercent.toInt().toString()) }
+                    var footer by remember(storeProfile) { mutableStateOf(storeProfile.receiptFooter) }
+                    var paperWidth by remember(storeProfile) { mutableStateOf(storeProfile.printerPaperWidth) }
 
                     val context = LocalContext.current
                     val qrisPickerLauncher = rememberLauncherForActivityResult(
@@ -491,11 +491,11 @@ fun AnalyticsScreen(
                                 Button(
                                     onClick = {
                                         viewModel.updateStoreProfile(
-                                            StoreProfile(
-                                                storeName = storeName,
-                                                address = address,
-                                                phone = phone,
-                                                instagram = instagram,
+                                            storeProfile.copy(
+                                                storeName = storeName.trim(),
+                                                address = address.trim(),
+                                                phone = phone.trim(),
+                                                instagram = instagram.trim(),
                                                 taxPercent = taxPct.toDoubleOrNull() ?: 11.0,
                                                 servicePercent = servicePct.toDoubleOrNull() ?: 0.0,
                                                 receiptFooter = footer,

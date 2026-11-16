@@ -156,6 +156,7 @@ fun PaymentCheckoutBottomSheet(
     itemsCount: Int = 1,
     selectedCustomer: Customer? = null,
     storeProfile: StoreProfile = StoreProfile(),
+    selectedTable: String = "",
     onUpdateQrisImage: ((String?) -> Unit)? = null,
     onProcessPayment: (method: PaymentMethod, cashPaid: Double, splitMethod2: String, splitAmt1: Double, splitAmt2: Double, customerName: String, receiptNote: String, shippingAddress: String, courier: String, shippingFee: Double) -> Unit,
     onDismiss: () -> Unit
@@ -166,6 +167,7 @@ fun PaymentCheckoutBottomSheet(
     val focusManager = LocalFocusManager.current
 
     val isOnline = storeProfile.businessType == com.example.data.model.BusinessType.ONLINE
+    val isResto = storeProfile.businessType == com.example.data.model.BusinessType.RESTAURANT
 
     // Customer & Shipping State for Online Orders
     var customerNameInput by remember { mutableStateOf(selectedCustomer?.name ?: "") }
@@ -334,7 +336,13 @@ fun PaymentCheckoutBottomSheet(
                             color = DarkSlate
                         )
                         Text(
-                            text = if (selectedCustomer != null) "Pelanggan: ${selectedCustomer.name} (${selectedCustomer.points} pts)" else if (isOnline) "Pesanan Online" else "Pelanggan Walk-In",
+                            text = if (selectedCustomer != null) {
+                                "Pelanggan: ${selectedCustomer.name} (${selectedCustomer.points} pts)"
+                            } else when {
+                                isOnline -> "Pesanan Online"
+                                isResto && selectedTable.isNotBlank() -> "Dine-In • $selectedTable"
+                                else -> "Pelanggan Walk-In"
+                            },
                             fontSize = 12.sp,
                             color = SlateMuted
                         )
@@ -407,7 +415,11 @@ fun PaymentCheckoutBottomSheet(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text(
-                                    text = if (isOnline) "$itemsCount Item • Online" else "$itemsCount Item",
+                                    text = when {
+                                        isOnline -> "$itemsCount Item • Online"
+                                        isResto && selectedTable.isNotBlank() -> "$itemsCount Menu • $selectedTable"
+                                        else -> "$itemsCount Item"
+                                    },
                                     color = CrispWhite,
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.SemiBold
@@ -514,12 +526,12 @@ fun PaymentCheckoutBottomSheet(
                     }
                 }
             } else {
-                // Offline Customer Name Input Field
+                // Offline / Restaurant Customer Name Input Field
                 OutlinedTextField(
                     value = customerNameInput,
                     onValueChange = { customerNameInput = it },
-                    label = { Text("Nama Pelanggan (Opsional)") },
-                    placeholder = { Text("Contoh: Ibu Ani / Meja 2 / Walk-In") },
+                    label = { Text(if (isResto) "Nama Tamu (Opsional)" else "Nama Pelanggan (Opsional)") },
+                    placeholder = { Text(if (isResto && selectedTable.isNotBlank()) "Default: Tamu $selectedTable" else "Contoh: Ibu Ani / Walk-In") },
                     leadingIcon = { Icon(Icons.Default.Person, contentDescription = null, tint = DeepRoyalBlue, modifier = Modifier.size(18.dp)) },
                     singleLine = true,
                     shape = RoundedCornerShape(10.dp),
@@ -579,7 +591,7 @@ fun PaymentCheckoutBottomSheet(
                     .clip(RoundedCornerShape(12.dp))
                     .border(1.dp, CardBorder, RoundedCornerShape(12.dp)),
                 indicator = { tabPositions ->
-                    TabRowDefaults.Indicator(
+                    TabRowDefaults.SecondaryIndicator(
                         modifier = Modifier.tabIndicatorOffset(tabPositions[selectedCategoryTab]),
                         height = 3.dp,
                         color = if (isOnline) EmeraldGreen else DeepRoyalBlue
@@ -1185,7 +1197,13 @@ fun PaymentCheckoutBottomSheet(
                             // One-tap customer payment complete & dismiss button
                             Button(
                                 onClick = {
-                                    val finalCustName = customerNameInput.trim().ifBlank { if (isOnline) "Pelanggan Online" else "Pelanggan Walk-In" }
+                                    val finalCustName = customerNameInput.trim().ifBlank {
+                                        when {
+                                            isOnline -> "Pelanggan Online"
+                                            isResto && selectedTable.isNotBlank() -> "Tamu $selectedTable"
+                                            else -> "Pelanggan Walk-In"
+                                        }
+                                    }
                                     onProcessPayment(
                                         PaymentMethod.QRIS,
                                         0.0,
@@ -1927,7 +1945,13 @@ fun PaymentCheckoutBottomSheet(
                 Button(
                     onClick = {
                         val note = receiptMessageInput.trim()
-                        val finalCustName = customerNameInput.trim().ifBlank { if (isOnline) "Pelanggan Online" else "Pelanggan Walk-In" }
+                        val finalCustName = customerNameInput.trim().ifBlank {
+                            when {
+                                isOnline -> "Pelanggan Online"
+                                isResto && selectedTable.isNotBlank() -> "Tamu $selectedTable"
+                                else -> "Pelanggan Walk-In"
+                            }
+                        }
                         val addr = shippingAddressInput.trim()
                         if (isOnline) {
                             val (chosenMethod, cashVal) = when (selectedCategoryTab) {
@@ -2121,7 +2145,13 @@ fun PaymentCheckoutBottomSheet(
                         Button(
                             onClick = {
                                 showFullScreenQris = false
-                                val finalCustName = customerNameInput.trim().ifBlank { if (isOnline) "Pelanggan Online" else "Pelanggan Walk-In" }
+                                val finalCustName = customerNameInput.trim().ifBlank {
+                                    when {
+                                        isOnline -> "Pelanggan Online"
+                                        isResto && selectedTable.isNotBlank() -> "Tamu $selectedTable"
+                                        else -> "Pelanggan Walk-In"
+                                    }
+                                }
                                 onProcessPayment(
                                     PaymentMethod.QRIS,
                                     0.0,

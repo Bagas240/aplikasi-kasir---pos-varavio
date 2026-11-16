@@ -37,6 +37,9 @@ class AuthPreferences(context: Context) {
         private const val KEY_STORE_PHONE = "key_store_phone"
         private const val KEY_STORE_LOGO = "key_store_logo"
         private const val KEY_STORE_QRIS = "key_store_qris"
+        private const val KEY_WIFI_NAME = "key_wifi_name"
+        private const val KEY_WIFI_PASSWORD = "key_wifi_password"
+        private const val KEY_TOTAL_TABLES = "key_total_tables"
         private const val KEY_TUTORIAL_COMPLETED = "key_tutorial_completed"
     }
 
@@ -119,6 +122,18 @@ class AuthPreferences(context: Context) {
         get() = prefs.getString(KEY_STORE_QRIS, null)
         set(value) = prefs.edit().putString(KEY_STORE_QRIS, value).apply()
 
+    var wifiName: String
+        get() = prefs.getString(KEY_WIFI_NAME, "") ?: ""
+        set(value) = prefs.edit().putString(KEY_WIFI_NAME, value).apply()
+
+    var wifiPassword: String
+        get() = prefs.getString(KEY_WIFI_PASSWORD, "") ?: ""
+        set(value) = prefs.edit().putString(KEY_WIFI_PASSWORD, value).apply()
+
+    var totalTables: Int
+        get() = prefs.getInt(KEY_TOTAL_TABLES, 12).coerceIn(1, 50)
+        set(value) = prefs.edit().putInt(KEY_TOTAL_TABLES, value.coerceIn(1, 50)).apply()
+
     var isTutorialCompleted: Boolean
         get() = prefs.getBoolean(KEY_TUTORIAL_COMPLETED, false)
         set(value) = prefs.edit().putBoolean(KEY_TUTORIAL_COMPLETED, value).apply()
@@ -177,7 +192,10 @@ class AuthPreferences(context: Context) {
         qrisUri: String? = null,
         type: BusinessType = BusinessType.OFFLINE,
         onlineLink: String = "",
-        courier: String = "J&T Express"
+        courier: String = "J&T Express",
+        wifiName: String = this.wifiName,
+        wifiPassword: String = this.wifiPassword,
+        totalTables: Int = this.totalTables
     ) {
         prefs.edit()
             .putString(KEY_STORE_NAME, name)
@@ -188,6 +206,9 @@ class AuthPreferences(context: Context) {
             .putString(KEY_BUSINESS_TYPE, type.name)
             .putString(KEY_ONLINE_STORE_LINK, onlineLink)
             .putString(KEY_DEFAULT_COURIER, courier)
+            .putString(KEY_WIFI_NAME, wifiName)
+            .putString(KEY_WIFI_PASSWORD, wifiPassword)
+            .putInt(KEY_TOTAL_TABLES, totalTables.coerceIn(1, 50))
             .apply()
     }
 
@@ -202,6 +223,7 @@ class AuthPreferences(context: Context) {
 
     fun getStoreProfile(): StoreProfile {
         val isOnline = businessType == BusinessType.ONLINE
+        val isResto = businessType == BusinessType.RESTAURANT
         return StoreProfile(
             storeName = storeName,
             businessType = businessType,
@@ -211,8 +233,19 @@ class AuthPreferences(context: Context) {
             phone = storePhone,
             logoUri = storeLogoUri,
             qrisImageUri = storeQrisImageUri,
-            receiptHeader = if (isOnline) "INVOICE / NOTA PESANAN ONLINE" else "STRUK PEMBELIAN RESMI",
-            receiptFooter = if (isOnline) "Terima kasih telah berbelanja online!\nMohon videokan saat membuka paket unboxing." else "Terima kasih atas kunjungan Anda!\nBarang yang sudah dibeli tidak dapat ditukar."
+            wifiName = wifiName,
+            wifiPassword = wifiPassword,
+            totalTables = totalTables,
+            receiptHeader = when {
+                isOnline -> "INVOICE / NOTA PESANAN ONLINE"
+                isResto -> "STRUK PESANAN RESTORAN"
+                else -> "STRUK PEMBELIAN RESMI"
+            },
+            receiptFooter = when {
+                isOnline -> "Terima kasih telah berbelanja online!\nMohon videokan saat membuka paket unboxing."
+                isResto -> "Terima kasih atas kunjungan Anda!\nSelamat menikmati hidangan kami."
+                else -> "Terima kasih atas kunjungan Anda!\nBarang yang sudah dibeli tidak dapat ditukar."
+            }
         )
     }
 

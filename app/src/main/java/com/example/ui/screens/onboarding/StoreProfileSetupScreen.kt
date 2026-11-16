@@ -69,6 +69,7 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.LocalShipping
+import androidx.compose.material.icons.filled.Restaurant
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import com.example.data.model.BusinessType
@@ -428,7 +429,7 @@ fun StoreProfileSetupScreen(
 
                     // OPSI JENIS USAHA DI SETUP PROFIL
                     Text(
-                        text = "Tipe Usaha:",
+                        text = "Pilih Mode Bisnis:",
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Bold,
                         color = DarkSlate
@@ -436,7 +437,7 @@ fun StoreProfileSetupScreen(
                     Spacer(modifier = Modifier.height(6.dp))
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         val isOffline = businessType == BusinessType.OFFLINE
                         Card(
@@ -466,8 +467,8 @@ fun StoreProfileSetupScreen(
                                     if (isOffline) Icon(Icons.Default.Check, contentDescription = null, tint = DeepRoyalBlue, modifier = Modifier.size(16.dp))
                                 }
                                 Spacer(modifier = Modifier.height(4.dp))
-                                Text("Usaha Offline", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = if (isOffline) DeepRoyalBlue else DarkSlate)
-                                Text("Toko fisik & kasir langsung", fontSize = 10.sp, color = Color(0xFF64748B))
+                                Text("Toko", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = if (isOffline) DeepRoyalBlue else DarkSlate)
+                                Text("Retail & kasir fisik", fontSize = 10.sp, color = Color(0xFF64748B))
                             }
                         }
 
@@ -499,8 +500,41 @@ fun StoreProfileSetupScreen(
                                     if (isOnline) Icon(Icons.Default.Check, contentDescription = null, tint = EmeraldGreen, modifier = Modifier.size(16.dp))
                                 }
                                 Spacer(modifier = Modifier.height(4.dp))
-                                Text("Usaha Online", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = if (isOnline) EmeraldGreen else DarkSlate)
-                                Text("Olshop & ekspedisi kurir", fontSize = 10.sp, color = Color(0xFF64748B))
+                                Text("Toko Online", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = if (isOnline) EmeraldGreen else DarkSlate)
+                                Text("Olshop & ekspedisi", fontSize = 10.sp, color = Color(0xFF64748B))
+                            }
+                        }
+
+                        val isResto = businessType == BusinessType.RESTAURANT
+                        Card(
+                            onClick = {
+                                businessType = BusinessType.RESTAURANT
+                                receiptFooter = "Terima kasih atas kunjungan Anda!\nSelamat menikmati hidangan kami."
+                            },
+                            modifier = Modifier
+                                .weight(1f)
+                                .border(
+                                    width = if (isResto) 2.dp else 1.dp,
+                                    color = if (isResto) Color(0xFFD97706) else Color(0xFFCBD5E1),
+                                    shape = RoundedCornerShape(10.dp)
+                                ),
+                            colors = CardDefaults.cardColors(
+                                containerColor = if (isResto) Color(0xFFFFFBEB) else CrispWhite
+                            ),
+                            shape = RoundedCornerShape(10.dp)
+                        ) {
+                            Column(modifier = Modifier.padding(10.dp)) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Icon(Icons.Default.Restaurant, contentDescription = null, tint = if (isResto) Color(0xFFD97706) else Color(0xFF64748B), modifier = Modifier.size(20.dp))
+                                    if (isResto) Icon(Icons.Default.Check, contentDescription = null, tint = Color(0xFFD97706), modifier = Modifier.size(16.dp))
+                                }
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text("Resto / Cafe", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = if (isResto) Color(0xFFD97706) else DarkSlate)
+                                Text("Meja & QR order", fontSize = 10.sp, color = Color(0xFF64748B))
                             }
                         }
                     }
@@ -678,7 +712,11 @@ fun StoreProfileSetupScreen(
                                 phone = trimmedPhone,
                                 logoUri = storeLogoUri,
                                 qrisImageUri = storeQrisUri,
-                                receiptHeader = if (businessType == BusinessType.ONLINE) "INVOICE / NOTA PESANAN ONLINE" else "STRUK PEMBELIAN RESMI",
+                                receiptHeader = when (businessType) {
+                                    BusinessType.ONLINE -> "INVOICE / NOTA PESANAN ONLINE"
+                                    BusinessType.RESTAURANT -> "STRUK PESANAN RESTORAN"
+                                    BusinessType.OFFLINE -> "STRUK PEMBELIAN RESMI"
+                                },
                                 receiptFooter = receiptFooter
                             )
                             onProfileSaved(profile)

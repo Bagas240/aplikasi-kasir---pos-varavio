@@ -49,10 +49,10 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Divider
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ModalBottomSheet
@@ -87,6 +87,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.data.model.BusinessType
 import com.example.data.model.CartItem
 import com.example.data.model.Customer
+import android.widget.Toast
+import androidx.compose.ui.platform.LocalContext
 import com.example.data.model.OrderEntity
 import com.example.data.model.PaymentMethod
 import com.example.data.model.Product
@@ -96,6 +98,8 @@ import com.example.ui.components.CameraView
 import com.example.ui.components.ExportSalesReportDialog
 import com.example.ui.components.PaymentCheckoutBottomSheet
 import com.example.ui.components.RecentSalesDialog
+import com.example.ui.components.RestaurantTableSelectorBar
+import com.example.ui.components.TableQrStandDialog
 import com.example.ui.theme.CrispWhite
 import com.example.ui.theme.DarkSlate
 import com.example.ui.theme.DeepRoyalBlue
@@ -131,6 +135,15 @@ fun CashierScreen(
     val storeProfile by viewModel.storeProfile.collectAsStateWithLifecycle()
     val recentSales by viewModel.recentSales.collectAsStateWithLifecycle()
     val completedOrders by viewModel.completedOrders.collectAsStateWithLifecycle()
+    val selectedTable by viewModel.selectedTable.collectAsStateWithLifecycle()
+    val isResto = storeProfile.businessType == BusinessType.RESTAURANT
+    val context = LocalContext.current
+
+    LaunchedEffect(isResto) {
+        if (isResto) {
+            viewModel.toggleScanner(false)
+        }
+    }
 
     LaunchedEffect(scanFeedback) {
         if (scanFeedback != null) {
@@ -149,6 +162,7 @@ fun CashierScreen(
     var showHoldPrompt by remember { mutableStateOf(false) }
     var showRecentSalesDialog by remember { mutableStateOf(false) }
     var showExportCsvDialog by remember { mutableStateOf(false) }
+    var showTableQrDialog by remember { mutableStateOf<String?>(null) }
 
     // Item note / discount modal state
     var itemToEdit by remember { mutableStateOf<CartItem?>(null) }
@@ -157,13 +171,13 @@ fun CashierScreen(
         listOf("Semua") + products.map { it.category }.distinct()
     }
 
-    val filteredProducts = remember(products, searchQuery, selectedCategory) {
+    val filteredProducts = remember(products, searchQuery, selectedCategory, isResto) {
         products.filter { prod ->
             val matchCategory = selectedCategory == "Semua" || prod.category == selectedCategory
             val matchSearch = searchQuery.isBlank() ||
                     prod.name.contains(searchQuery, ignoreCase = true) ||
                     prod.sku.contains(searchQuery, ignoreCase = true) ||
-                    prod.barcode.contains(searchQuery, ignoreCase = true)
+                    (!isResto && prod.barcode.contains(searchQuery, ignoreCase = true))
             matchCategory && matchSearch
         }
     }
@@ -186,20 +200,38 @@ fun CashierScreen(
                         .weight(0.64f)
                         .fillMaxHeight()
                 ) {
-                    // Live CameraView Scanner Collapsible Drawer
-                    AnimatedVisibility(visible = isScannerActive) {
-                        CameraView(
-                            onBarcodeScanned = {},
-                            lastScannedCode = lastScannedBarcode,
-                            onClose = { viewModel.toggleScanner(false) },
-                            sampleCodes = products.take(5).map { it.barcode },
-                            products = products,
-                            onBarcodeResult = { result -> viewModel.onScanBarcodeResult(result) },
-                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                    // Top Bar: Table Selector in Restaurant Mode OR CameraView Scanner in Toko Mode
+                    if (isResto) {
+                        RestaurantTableSelectorBar(
+                            tables = viewModel.restaurantTables,
+                            selectedTable = selectedTable,
+                            draftOrders = draftOrders,
+                            onSelectTable = { table -> viewModel.switchTable(table) },
+                            onShowQr = { showTableQrDialog = it },
+                            onSaveTableOrder = {
+                                if (cartItems.isNotEmpty()) {
+                                    viewModel.holdOrder(selectedTable)
+                                    Toast.makeText(context, "Pesanan disimpan untuk $selectedTable", Toast.LENGTH_SHORT).show()
+                                }
+                            },
+                            hasCartItems = cartItems.isNotEmpty()
                         )
+                    } else {
+                        // Live CameraView Scanner Collapsible Drawer
+                        AnimatedVisibility(visible = isScannerActive) {
+                            CameraView(
+                                onBarcodeScanned = {},
+                                lastScannedCode = lastScannedBarcode,
+                                onClose = { viewModel.toggleScanner(false) },
+                                sampleCodes = products.take(5).map { it.barcode },
+                                products = products,
+                                onBarcodeResult = { result -> viewModel.onScanBarcodeResult(result) },
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                            )
+                        }
                     }
 
-                    // Search Bar & Scanner Toggle Row
+                    // Search Bar & Actions Row
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -209,7 +241,7 @@ fun CashierScreen(
                         OutlinedTextField(
                             value = searchQuery,
                             onValueChange = { searchQuery = it },
-                            placeholder = { Text("Cari Produk, SKU, Barcode...", fontSize = 13.sp) },
+                            placeholder = { Text(if (isResto) "Cari menu makanan & minuman..." else "Cari Produk, SKU, Barcode...", fontSize = 13.sp) },
                             leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = VibrantBlue) },
                             trailingIcon = {
                                 if (searchQuery.isNotBlank()) {
@@ -226,23 +258,24 @@ fun CashierScreen(
                                 .testTag("catalog_search_input")
                         )
 
-                        Spacer(modifier = Modifier.width(8.dp))
-
-                        // Scanner Toggle Button
-                        Button(
-                            onClick = { viewModel.toggleScanner(!isScannerActive) },
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = if (isScannerActive) EmeraldGreen else DeepRoyalBlue,
-                                contentColor = CrispWhite
-                            ),
-                            shape = RoundedCornerShape(10.dp),
-                            modifier = Modifier
-                                .height(50.dp)
-                                .testTag("scanner_toggle_button")
-                        ) {
-                            Icon(Icons.Default.QrCodeScanner, contentDescription = "Scanner", modifier = Modifier.size(18.dp), tint = CrispWhite)
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text(if (isScannerActive) "Tutup" else "Scan", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = CrispWhite)
+                        // Scanner Toggle Button (Hidden in Restaurant Mode)
+                        if (!isResto) {
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Button(
+                                onClick = { viewModel.toggleScanner(!isScannerActive) },
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = if (isScannerActive) EmeraldGreen else DeepRoyalBlue,
+                                    contentColor = CrispWhite
+                                ),
+                                shape = RoundedCornerShape(10.dp),
+                                modifier = Modifier
+                                    .height(50.dp)
+                                    .testTag("scanner_toggle_button")
+                            ) {
+                                Icon(Icons.Default.QrCodeScanner, contentDescription = "Scanner", modifier = Modifier.size(18.dp), tint = CrispWhite)
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(if (isScannerActive) "Tutup" else "Scan", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = CrispWhite)
+                            }
                         }
 
                         // Draft / Hold Orders badge button
@@ -293,8 +326,8 @@ fun CashierScreen(
                         }
                     }
 
-                    // Captured Product Codes Display on Checkout Screen
-                    if (capturedProductCodes.isNotEmpty()) {
+                    // Captured Product Codes & Scan Notification Banner (Hidden in Restaurant Mode)
+                    if (!isResto && capturedProductCodes.isNotEmpty()) {
                         CapturedProductCodesSection(
                             capturedCodes = capturedProductCodes,
                             lastScannedBarcode = lastScannedBarcode,
@@ -306,50 +339,52 @@ fun CashierScreen(
                     }
 
                     // Real-time Barcode Scan Notification Banner
-                    AnimatedVisibility(visible = scanFeedback != null) {
-                        scanFeedback?.let { feedback ->
-                            val isFound = feedback.product != null
-                            Surface(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 12.dp, vertical = 3.dp),
-                                shape = RoundedCornerShape(8.dp),
-                                color = if (isFound) Color(0xFFECFDF5) else Color(0xFFFEF2F2),
-                                border = androidx.compose.foundation.BorderStroke(
-                                    1.dp,
-                                    if (isFound) EmeraldGreen else Color(0xFFEF4444)
-                                )
-                            ) {
-                                Row(
+                    if (!isResto) {
+                        AnimatedVisibility(visible = scanFeedback != null) {
+                            scanFeedback?.let { feedback ->
+                                val isFound = feedback.product != null
+                                Surface(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .padding(horizontal = 12.dp, vertical = 6.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.SpaceBetween
+                                        .padding(horizontal = 12.dp, vertical = 3.dp),
+                                    shape = RoundedCornerShape(8.dp),
+                                    color = if (isFound) Color(0xFFECFDF5) else Color(0xFFFEF2F2),
+                                    border = androidx.compose.foundation.BorderStroke(
+                                        1.dp,
+                                        if (isFound) EmeraldGreen else Color(0xFFEF4444)
+                                    )
                                 ) {
                                     Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(horizontal = 12.dp, vertical = 6.dp),
                                         verticalAlignment = Alignment.CenterVertically,
-                                        modifier = Modifier.weight(1f)
+                                        horizontalArrangement = Arrangement.SpaceBetween
                                     ) {
-                                        Icon(
-                                            imageVector = if (isFound) Icons.Default.Check else Icons.Default.Warning,
-                                            contentDescription = null,
-                                            tint = if (isFound) EmeraldGreen else Color(0xFFDC2626),
-                                            modifier = Modifier.size(18.dp)
-                                        )
-                                        Spacer(modifier = Modifier.width(6.dp))
-                                        Text(
-                                            text = if (isFound) "${feedback.product!!.name} (+1) • ${CurrencyFormatter.formatRupiah(feedback.product.sellPrice)}" else "Barcode: ${feedback.barcode} belum terdaftar",
-                                            fontWeight = FontWeight.Bold,
-                                            fontSize = 11.sp,
-                                            color = if (isFound) Color(0xFF065F46) else Color(0xFF991B1B)
-                                        )
-                                    }
-                                    IconButton(
-                                        onClick = { viewModel.clearScanFeedback() },
-                                        modifier = Modifier.size(20.dp)
-                                    ) {
-                                        Icon(Icons.Default.Close, contentDescription = "Tutup", tint = Color(0xFF64748B), modifier = Modifier.size(14.dp))
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            modifier = Modifier.weight(1f)
+                                        ) {
+                                            Icon(
+                                                imageVector = if (isFound) Icons.Default.Check else Icons.Default.Warning,
+                                                contentDescription = null,
+                                                tint = if (isFound) EmeraldGreen else Color(0xFFDC2626),
+                                                modifier = Modifier.size(18.dp)
+                                            )
+                                            Spacer(modifier = Modifier.width(6.dp))
+                                            Text(
+                                                text = if (isFound) "${feedback.product!!.name} (+1) • ${CurrencyFormatter.formatRupiah(feedback.product.sellPrice)}" else "Barcode: ${feedback.barcode} belum terdaftar",
+                                                fontWeight = FontWeight.Bold,
+                                                fontSize = 11.sp,
+                                                color = if (isFound) Color(0xFF065F46) else Color(0xFF991B1B)
+                                            )
+                                        }
+                                        IconButton(
+                                            onClick = { viewModel.clearScanFeedback() },
+                                            modifier = Modifier.size(20.dp)
+                                        ) {
+                                            Icon(Icons.Default.Close, contentDescription = "Tutup", tint = Color(0xFF64748B), modifier = Modifier.size(14.dp))
+                                        }
                                     }
                                 }
                             }
@@ -409,12 +444,12 @@ fun CashierScreen(
                 }
 
                 // Vertical Divider
-                Divider(modifier = Modifier.fillMaxHeight().width(1.dp), color = Color(0xFFE2E8F0))
+                Box(modifier = Modifier.fillMaxHeight().width(1.dp).background(Color(0xFFE2E8F0)))
 
                 // RIGHT PANEL (36% width): Persistent Shopping Cart & Checkout Sidebar
                 Surface(
                     color = CrispWhite,
-                    shadowElevation = 4.dp,
+                    shadowElevation = 2.dp,
                     modifier = Modifier
                         .weight(0.36f)
                         .fillMaxHeight()
@@ -422,12 +457,20 @@ fun CashierScreen(
                     CartSidebarView(
                         cartItems = cartItems,
                         selectedCustomer = selectedCustomer,
+                        selectedTable = selectedTable,
                         taxEnabled = taxEnabled,
                         serviceEnabled = serviceEnabled,
                         storeProfile = storeProfile,
                         viewModel = viewModel,
                         onSelectCustomer = { showCustomerPicker = true },
-                        onHoldOrder = { showHoldPrompt = true },
+                        onHoldOrder = {
+                            if (isResto) {
+                                viewModel.holdOrder(selectedTable)
+                                Toast.makeText(context, "Pesanan disimpan untuk $selectedTable", Toast.LENGTH_SHORT).show()
+                            } else {
+                                showHoldPrompt = true
+                            }
+                        },
                         onClearCart = { viewModel.clearCart() },
                         onEditItem = { itemToEdit = it },
                         onProceedPayment = { showCheckoutDialog = true }
@@ -437,20 +480,38 @@ fun CashierScreen(
         } else {
             // PORTRAIT MODE (Single-Handed Mobile View)
             Column(modifier = Modifier.fillMaxSize()) {
-                // Live CameraView Scanner Collapsible Drawer
-                AnimatedVisibility(visible = isScannerActive) {
-                    CameraView(
-                        onBarcodeScanned = {},
-                        lastScannedCode = lastScannedBarcode,
-                        onClose = { viewModel.toggleScanner(false) },
-                        sampleCodes = products.take(5).map { it.barcode },
-                        products = products,
-                        onBarcodeResult = { result -> viewModel.onScanBarcodeResult(result) },
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                // Top Bar: Table Selector in Restaurant Mode OR CameraView Scanner in Toko Mode
+                if (isResto) {
+                    RestaurantTableSelectorBar(
+                        tables = viewModel.restaurantTables,
+                        selectedTable = selectedTable,
+                        draftOrders = draftOrders,
+                        onSelectTable = { table -> viewModel.switchTable(table) },
+                        onShowQr = { showTableQrDialog = it },
+                        onSaveTableOrder = {
+                            if (cartItems.isNotEmpty()) {
+                                viewModel.holdOrder(selectedTable)
+                                Toast.makeText(context, "Pesanan disimpan untuk $selectedTable", Toast.LENGTH_SHORT).show()
+                            }
+                        },
+                        hasCartItems = cartItems.isNotEmpty()
                     )
+                } else {
+                    // Live CameraView Scanner Collapsible Drawer
+                    AnimatedVisibility(visible = isScannerActive) {
+                        CameraView(
+                            onBarcodeScanned = {},
+                            lastScannedCode = lastScannedBarcode,
+                            onClose = { viewModel.toggleScanner(false) },
+                            sampleCodes = products.take(5).map { it.barcode },
+                            products = products,
+                            onBarcodeResult = { result -> viewModel.onScanBarcodeResult(result) },
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                        )
+                    }
                 }
 
-                // Search Bar & Scanner Toggle Row
+                // Search Bar & Actions Row
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -460,7 +521,7 @@ fun CashierScreen(
                     OutlinedTextField(
                         value = searchQuery,
                         onValueChange = { searchQuery = it },
-                        placeholder = { Text("Cari Produk, SKU, Barcode...", fontSize = 13.sp) },
+                        placeholder = { Text(if (isResto) "Cari menu makanan & minuman..." else "Cari Produk, SKU, Barcode...", fontSize = 13.sp) },
                         leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = VibrantBlue) },
                         trailingIcon = {
                             if (searchQuery.isNotBlank()) {
@@ -477,23 +538,24 @@ fun CashierScreen(
                             .testTag("catalog_search_input")
                     )
 
-                    Spacer(modifier = Modifier.width(8.dp))
-
-                    // Scanner Toggle Button
-                    Button(
-                        onClick = { viewModel.toggleScanner(!isScannerActive) },
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = if (isScannerActive) EmeraldGreen else DeepRoyalBlue,
-                            contentColor = CrispWhite
-                        ),
-                        shape = RoundedCornerShape(10.dp),
-                        modifier = Modifier
-                            .height(52.dp)
-                            .testTag("scanner_toggle_button")
-                    ) {
-                        Icon(Icons.Default.QrCodeScanner, contentDescription = "Scanner", modifier = Modifier.size(20.dp), tint = CrispWhite)
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(if (isScannerActive) "Tutup" else "Scan", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = CrispWhite)
+                    // Scanner Toggle Button (Hidden in Restaurant Mode)
+                    if (!isResto) {
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Button(
+                            onClick = { viewModel.toggleScanner(!isScannerActive) },
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = if (isScannerActive) EmeraldGreen else DeepRoyalBlue,
+                                contentColor = CrispWhite
+                            ),
+                            shape = RoundedCornerShape(10.dp),
+                            modifier = Modifier
+                                .height(52.dp)
+                                .testTag("scanner_toggle_button")
+                        ) {
+                            Icon(Icons.Default.QrCodeScanner, contentDescription = "Scanner", modifier = Modifier.size(20.dp), tint = CrispWhite)
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(if (isScannerActive) "Tutup" else "Scan", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = CrispWhite)
+                        }
                     }
 
                     // Draft / Hold Orders badge button
@@ -544,8 +606,8 @@ fun CashierScreen(
                     }
                 }
 
-                // Captured Product Codes Display on Checkout Screen
-                if (capturedProductCodes.isNotEmpty()) {
+                // Captured Product Codes & Scan Notification Banner (Hidden in Restaurant Mode)
+                if (!isResto && capturedProductCodes.isNotEmpty()) {
                     CapturedProductCodesSection(
                         capturedCodes = capturedProductCodes,
                         lastScannedBarcode = lastScannedBarcode,
@@ -557,61 +619,63 @@ fun CashierScreen(
                 }
 
                 // Real-time Barcode Scan Notification Banner
-                AnimatedVisibility(visible = scanFeedback != null) {
-                    scanFeedback?.let { feedback ->
-                        val isFound = feedback.product != null
-                        Surface(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 12.dp, vertical = 4.dp),
-                            shape = RoundedCornerShape(8.dp),
-                            color = if (isFound) Color(0xFFECFDF5) else Color(0xFFFEF2F2),
-                            border = androidx.compose.foundation.BorderStroke(
-                                1.dp,
-                                if (isFound) EmeraldGreen else Color(0xFFEF4444)
-                            )
-                        ) {
-                            Row(
+                if (!isResto) {
+                    AnimatedVisibility(visible = scanFeedback != null) {
+                        scanFeedback?.let { feedback ->
+                            val isFound = feedback.product != null
+                            Surface(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(horizontal = 12.dp, vertical = 8.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.SpaceBetween
+                                    .padding(horizontal = 12.dp, vertical = 4.dp),
+                                shape = RoundedCornerShape(8.dp),
+                                color = if (isFound) Color(0xFFECFDF5) else Color(0xFFFEF2F2),
+                                border = androidx.compose.foundation.BorderStroke(
+                                    1.dp,
+                                    if (isFound) EmeraldGreen else Color(0xFFEF4444)
+                                )
                             ) {
                                 Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 12.dp, vertical = 8.dp),
                                     verticalAlignment = Alignment.CenterVertically,
-                                    modifier = Modifier.weight(1f)
+                                    horizontalArrangement = Arrangement.SpaceBetween
                                 ) {
-                                    Icon(
-                                        imageVector = if (isFound) Icons.Default.Check else Icons.Default.Warning,
-                                        contentDescription = null,
-                                        tint = if (isFound) EmeraldGreen else Color(0xFFDC2626),
-                                        modifier = Modifier.size(20.dp)
-                                    )
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Column {
-                                        Text(
-                                            text = if (isFound) "${feedback.product!!.name} (+1)" else "Barcode: ${feedback.barcode}",
-                                            fontWeight = FontWeight.Bold,
-                                            fontSize = 12.sp,
-                                            color = if (isFound) Color(0xFF065F46) else Color(0xFF991B1B)
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        modifier = Modifier.weight(1f)
+                                    ) {
+                                        Icon(
+                                            imageVector = if (isFound) Icons.Default.Check else Icons.Default.Warning,
+                                            contentDescription = null,
+                                            tint = if (isFound) EmeraldGreen else Color(0xFFDC2626),
+                                            modifier = Modifier.size(20.dp)
                                         )
-                                        Text(
-                                            text = if (isFound) {
-                                                "Ditambahkan ke transaksi • ${CurrencyFormatter.formatRupiah(feedback.product.sellPrice)}"
-                                            } else {
-                                                "Produk belum terdaftar dalam katalog POS"
-                                            },
-                                            fontSize = 11.sp,
-                                            color = Color(0xFF64748B)
-                                        )
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Column {
+                                            Text(
+                                                text = if (isFound) "${feedback.product!!.name} (+1)" else "Barcode: ${feedback.barcode}",
+                                                fontWeight = FontWeight.Bold,
+                                                fontSize = 12.sp,
+                                                color = if (isFound) Color(0xFF065F46) else Color(0xFF991B1B)
+                                            )
+                                            Text(
+                                                text = if (isFound) {
+                                                    "Ditambahkan ke transaksi • ${CurrencyFormatter.formatRupiah(feedback.product.sellPrice)}"
+                                                } else {
+                                                    "Produk belum terdaftar dalam katalog POS"
+                                                },
+                                                fontSize = 11.sp,
+                                                color = Color(0xFF64748B)
+                                            )
+                                        }
                                     }
-                                }
-                                IconButton(
-                                    onClick = { viewModel.clearScanFeedback() },
-                                    modifier = Modifier.size(24.dp)
-                                ) {
-                                    Icon(Icons.Default.Close, contentDescription = "Tutup", tint = Color(0xFF64748B), modifier = Modifier.size(16.dp))
+                                    IconButton(
+                                        onClick = { viewModel.clearScanFeedback() },
+                                        modifier = Modifier.size(24.dp)
+                                    ) {
+                                        Icon(Icons.Default.Close, contentDescription = "Tutup", tint = Color(0xFF64748B), modifier = Modifier.size(16.dp))
+                                    }
                                 }
                             }
                         }
@@ -703,7 +767,11 @@ fun CashierScreen(
                                     }
                                     Spacer(modifier = Modifier.width(6.dp))
                                     Text(
-                                        text = if (storeProfile.businessType == BusinessType.ONLINE) "Pesanan Pelanggan" else "Keranjang Belanja",
+                                        text = when (storeProfile.businessType) {
+                                            BusinessType.ONLINE -> "Pesanan Online"
+                                            BusinessType.RESTAURANT -> "Pesanan • $selectedTable"
+                                            BusinessType.OFFLINE -> "Keranjang Belanja"
+                                        },
                                         fontSize = 13.sp,
                                         fontWeight = FontWeight.Medium,
                                         color = Color(0xFF64748B)
@@ -775,13 +843,23 @@ fun CashierScreen(
                 ) {
                     Column {
                         Text(
-                            text = if (storeProfile.businessType == BusinessType.ONLINE) "Daftar Pesanan Online" else "Keranjang Belanja",
+                            text = when (storeProfile.businessType) {
+                                BusinessType.ONLINE -> "Daftar Pesanan Online"
+                                BusinessType.RESTAURANT -> "Pesanan $selectedTable"
+                                BusinessType.OFFLINE -> "Keranjang Belanja"
+                            },
                             fontWeight = FontWeight.Bold,
                             fontSize = 18.sp,
                             color = DarkSlate
                         )
                         Text(
-                            text = if (selectedCustomer != null) "Pelanggan: ${selectedCustomer!!.name} (${selectedCustomer!!.points} poin)" else if (storeProfile.businessType == BusinessType.ONLINE) "Pelanggan Online" else "Pelanggan: Walk-In",
+                            text = if (selectedCustomer != null) {
+                                "Pelanggan: ${selectedCustomer!!.name} (${selectedCustomer!!.points} poin)"
+                            } else when (storeProfile.businessType) {
+                                BusinessType.ONLINE -> "Pelanggan Online"
+                                BusinessType.RESTAURANT -> "Tamu Dine-In ($selectedTable)"
+                                BusinessType.OFFLINE -> "Pelanggan: Walk-In"
+                            },
                             fontSize = 12.sp,
                             color = VibrantBlue
                         )
@@ -790,7 +868,15 @@ fun CashierScreen(
                         IconButton(onClick = { showCustomerPicker = true }) {
                             Icon(Icons.Default.Person, contentDescription = "Pilih Pelanggan", tint = DeepRoyalBlue)
                         }
-                        IconButton(onClick = { showHoldPrompt = true }) {
+                        IconButton(onClick = {
+                            if (isResto) {
+                                viewModel.holdOrder(selectedTable)
+                                showCartSheet = false
+                                Toast.makeText(context, "Pesanan disimpan untuk $selectedTable", Toast.LENGTH_SHORT).show()
+                            } else {
+                                showHoldPrompt = true
+                            }
+                        }) {
                             Icon(Icons.Default.BookmarkBorder, contentDescription = "Simpan Draft", tint = Color(0xFFD97706))
                         }
                         IconButton(onClick = { viewModel.clearCart() }) {
@@ -799,7 +885,7 @@ fun CashierScreen(
                     }
                 }
 
-                Divider(modifier = Modifier.padding(vertical = 8.dp))
+                HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
 
                 // Cart items list
                 LazyColumn(
@@ -815,11 +901,11 @@ fun CashierScreen(
                             onMinus = { viewModel.updateCartItemQuantity(item, -1) },
                             onEdit = { itemToEdit = item }
                         )
-                        Divider(color = Color(0xFFF1F5F9))
+                        HorizontalDivider(color = Color(0xFFF1F5F9))
                     }
                 }
 
-                Divider(modifier = Modifier.padding(vertical = 6.dp))
+                HorizontalDivider(modifier = Modifier.padding(vertical = 6.dp))
 
                 // Toggles for Tax & Service
                 Row(
@@ -912,6 +998,7 @@ fun CashierScreen(
             itemsCount = cartItems.sumOf { it.quantity },
             selectedCustomer = selectedCustomer,
             storeProfile = storeProfile,
+            selectedTable = if (isResto) selectedTable else "",
             onUpdateQrisImage = { uri -> viewModel.updateStoreQrisImage(uri) },
             onProcessPayment = { method, cashPaid, splitMethod2, splitAmt1, splitAmt2, custName, receiptNote, shippingAddr, courier, shippingFee ->
                 showCheckoutDialog = false
@@ -929,6 +1016,16 @@ fun CashierScreen(
                 )
             },
             onDismiss = { showCheckoutDialog = false }
+        )
+    }
+
+    // TABLE QR STAND DIALOG (RESTAURANT MODE)
+    showTableQrDialog?.let { tableName ->
+        TableQrStandDialog(
+            tableName = tableName,
+            storeName = storeProfile.storeName,
+            storeProfile = storeProfile,
+            onDismiss = { showTableQrDialog = null }
         )
     }
 
@@ -1304,6 +1401,7 @@ fun CashierScreen(
 fun CartSidebarView(
     cartItems: List<CartItem>,
     selectedCustomer: Customer?,
+    selectedTable: String = "Meja 1",
     taxEnabled: Boolean,
     serviceEnabled: Boolean,
     storeProfile: com.example.data.model.StoreProfile,
@@ -1314,6 +1412,9 @@ fun CartSidebarView(
     onEditItem: (CartItem) -> Unit,
     onProceedPayment: () -> Unit
 ) {
+    val isResto = storeProfile.businessType == BusinessType.RESTAURANT
+    val isOnline = storeProfile.businessType == BusinessType.ONLINE
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -1337,12 +1438,16 @@ fun CartSidebarView(
                 Spacer(modifier = Modifier.width(8.dp))
                 Column {
                     Text(
-                        text = if (storeProfile.businessType == BusinessType.ONLINE) "Pesanan Online" else "Keranjang Kasir",
+                        text = when {
+                            isOnline -> "Pesanan Online"
+                            isResto -> "Pesanan • $selectedTable"
+                            else -> "Keranjang Kasir"
+                        },
                         fontWeight = FontWeight.Bold,
                         fontSize = 15.sp,
                         color = DarkSlate
                     )
-                    Text("${cartItems.sumOf { it.quantity }} Produk Ditambahkan", fontSize = 11.sp, color = Color(0xFF64748B))
+                    Text("${cartItems.sumOf { it.quantity }} Item Ditambahkan", fontSize = 11.sp, color = Color(0xFF64748B))
                 }
             }
 
@@ -1354,7 +1459,7 @@ fun CartSidebarView(
                 ) {
                     Icon(
                         Icons.Default.BookmarkBorder,
-                        contentDescription = "Tahan Order",
+                        contentDescription = "Simpan Pesanan",
                         tint = if (cartItems.isNotEmpty()) Color(0xFFD97706) else Color(0xFFCBD5E1),
                         modifier = Modifier.size(18.dp)
                     )
@@ -1397,7 +1502,13 @@ fun CartSidebarView(
                     Icon(Icons.Default.Person, contentDescription = null, tint = DeepRoyalBlue, modifier = Modifier.size(16.dp))
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
-                        text = if (selectedCustomer != null) selectedCustomer.name else if (storeProfile.businessType == BusinessType.ONLINE) "Pelanggan Online" else "Pelanggan: Walk-In",
+                        text = if (selectedCustomer != null) {
+                            selectedCustomer.name
+                        } else when {
+                            isOnline -> "Pelanggan Online"
+                            isResto -> "Tamu $selectedTable"
+                            else -> "Pelanggan: Walk-In"
+                        },
                         fontSize = 12.sp,
                         fontWeight = FontWeight.SemiBold,
                         color = DarkSlate
@@ -1412,7 +1523,7 @@ fun CartSidebarView(
             }
         }
 
-        Divider(modifier = Modifier.padding(vertical = 8.dp), color = Color(0xFFF1F5F9))
+        HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = Color(0xFFF1F5F9))
 
         // Scrollable Cart Items
         if (cartItems.isEmpty()) {
@@ -1425,8 +1536,17 @@ fun CartSidebarView(
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Icon(Icons.Default.ShoppingCart, contentDescription = null, tint = Color(0xFFCBD5E1), modifier = Modifier.size(40.dp))
                     Spacer(modifier = Modifier.height(6.dp))
-                    Text("Keranjang Belanja Kosong", fontWeight = FontWeight.SemiBold, fontSize = 13.sp, color = Color(0xFF64748B))
-                    Text("Pilih produk di sebelah kiri atau scan barcode", fontSize = 11.sp, color = Color(0xFF94A3B8))
+                    Text(
+                        text = if (isResto) "Belum Ada Pesanan di $selectedTable" else "Keranjang Belanja Kosong",
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 13.sp,
+                        color = Color(0xFF64748B)
+                    )
+                    Text(
+                        text = if (isResto) "Pilih menu di sebelah kiri" else "Pilih produk di sebelah kiri atau scan barcode",
+                        fontSize = 11.sp,
+                        color = Color(0xFF94A3B8)
+                    )
                 }
             }
         } else {
@@ -1442,12 +1562,12 @@ fun CartSidebarView(
                         onMinus = { viewModel.updateCartItemQuantity(item, -1) },
                         onEdit = { onEditItem(item) }
                     )
-                    Divider(color = Color(0xFFF1F5F9))
+                    HorizontalDivider(color = Color(0xFFF1F5F9))
                 }
             }
         }
 
-        Divider(modifier = Modifier.padding(vertical = 6.dp), color = Color(0xFFE2E8F0))
+        HorizontalDivider(modifier = Modifier.padding(vertical = 6.dp), color = Color(0xFFE2E8F0))
 
         // Modifiers & Price Summary
         Column(modifier = Modifier.fillMaxWidth()) {

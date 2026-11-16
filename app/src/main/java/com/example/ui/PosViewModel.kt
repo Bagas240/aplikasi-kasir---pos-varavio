@@ -137,16 +137,8 @@ class PosViewModel(application: Application) : AndroidViewModel(application) {
     private val _storeProfile = MutableStateFlow(
         run {
             val prefs = AuthPreferences(application)
-            StoreProfile(
-                storeName = prefs.storeName.ifBlank { "VORAVIO MART" },
-                businessType = prefs.businessType,
-                onlineStoreLink = prefs.onlineStoreLink,
-                defaultCourier = prefs.defaultCourier,
-                address = prefs.storeAddress,
-                phone = prefs.storePhone,
-                logoUri = prefs.storeLogoUri,
-                qrisImageUri = prefs.storeQrisImageUri
-            )
+            val saved = prefs.getStoreProfile()
+            if (saved.storeName.isBlank()) saved.copy(storeName = "VORAVIO MART") else saved
         }
     )
     val storeProfile: StateFlow<StoreProfile> = _storeProfile.asStateFlow()
@@ -162,7 +154,10 @@ class PosViewModel(application: Application) : AndroidViewModel(application) {
             qrisUri = profile.qrisImageUri,
             type = profile.businessType,
             onlineLink = profile.onlineStoreLink,
-            courier = profile.defaultCourier
+            courier = profile.defaultCourier,
+            wifiName = profile.wifiName,
+            wifiPassword = profile.wifiPassword,
+            totalTables = profile.totalTables
         )
     }
 
@@ -302,14 +297,98 @@ class PosViewModel(application: Application) : AndroidViewModel(application) {
     fun toggleService(enabled: Boolean) { _serviceEnabled.value = enabled }
     fun setTransactionNote(note: String) { _transactionNote.value = note }
 
+    // RESTAURANT / CAFE TABLE STATE
+    private val _selectedTable = MutableStateFlow("Meja 1")
+    val selectedTable: StateFlow<String> = _selectedTable.asStateFlow()
+
+    fun getRestaurantTables(totalTables: Int = _storeProfile.value.totalTables): List<String> {
+        val count = totalTables.coerceIn(1, 50)
+        return (1..count).map { "Meja $it" } + listOf("VIP 1", "VIP 2", "Take Away")
+    }
+
+    val restaurantTables: List<String>
+        get() = getRestaurantTables()
+
+    fun setSelectedTable(table: String) {
+        _selectedTable.value = table
+    }
+
+    fun getTableDraft(table: String): OrderEntity? {
+        return draftOrders.value.find { it.draftTag.equals(table, ignoreCase = true) }
+    }
+
+    fun isTableOccupied(table: String): Boolean {
+        return getTableDraft(table) != null
+    }
+
+    fun switchTable(newTable: String) {
+        if (_selectedTable.value.equals(newTable, ignoreCase = true)) return
+        val currentTable = _selectedTable.value
+        val itemsSnapshot = _cartItems.value.toList()
+        val subtotalSnapshot = cartSubtotal
+        val discountSnapshot = cartDiscountAmount
+        val taxSnapshot = cartTaxAmount
+        val serviceSnapshot = cartServiceAmount
+        val grandTotalSnapshot = cartGrandTotal
+        val customerSnapshot = _selectedCustomer.value
+        val taxOn = _taxEnabled.value
+        val serviceOn = _serviceEnabled.value
+        val existingDraftForCurrent = getTableDraft(currentTable)
+        val draftForNewTable = getTableDraft(newTable)
+
+        viewModelScope.launch {
+            if (itemsSnapshot.isNotEmpty()) {
+                if (existingDraftForCurrent != null) {
+                    repository.deleteDraftOrder(existingDraftForCurrent)
+                }
+                val draft = OrderEntity(
+                    orderId = "DFT-" + UUID.randomUUID().toString().take(8).uppercase(),
+                    cashierName = _currentUser.value.name,
+                    customerName = customerSnapshot?.name ?: "Tamu $currentTable",
+                    subtotal = subtotalSnapshot,
+                    discountTotal = discountSnapshot,
+                    taxPercent = if (taxOn) _storeProfile.value.taxPercent else 0.0,
+                    taxAmount = taxSnapshot,
+                    servicePercent = if (serviceOn) _storeProfile.value.servicePercent else 0.0,
+                    serviceAmount = serviceSnapshot,
+                    grandTotal = grandTotalSnapshot,
+                    status = OrderStatus.HELD_DRAFT.name,
+                    draftTag = currentTable,
+                    itemsJson = PosRepository.serializeItems(itemsSnapshot)
+                )
+                repository.saveDraftOrder(draft)
+            }
+
+            clearCart()
+            _selectedTable.value = newTable
+
+            if (draftForNewTable != null) {
+                val restoredItems = PosRepository.deserializeItems(draftForNewTable.itemsJson, products.value)
+                _cartItems.value = restoredItems
+                _transactionDiscountPercent.value = 0.0
+                _taxEnabled.value = draftForNewTable.taxAmount > 0
+                _serviceEnabled.value = draftForNewTable.serviceAmount > 0
+                repository.deleteDraftOrder(draftForNewTable)
+            }
+        }
+    }
+
     // DRAFT / HOLD ORDER
     fun holdOrder(draftTag: String) {
         if (_cartItems.value.isEmpty()) return
         val orderId = "DFT-" + UUID.randomUUID().toString().take(8).uppercase()
+        val isResto = _storeProfile.value.businessType == BusinessType.RESTAURANT
+        val effectiveTag = if (draftTag.isBlank()) {
+            if (isResto) _selectedTable.value else "Meja ${draftOrders.value.size + 1}"
+        } else draftTag
+
+        // Replace any existing draft with the same tag
+        val existingDraft = draftOrders.value.find { it.draftTag.equals(effectiveTag, ignoreCase = true) }
+
         val draft = OrderEntity(
             orderId = orderId,
             cashierName = _currentUser.value.name,
-            customerName = _selectedCustomer.value?.name ?: "Draft Customer",
+            customerName = _selectedCustomer.value?.name ?: if (isResto) "Tamu $effectiveTag" else "Draft Customer",
             subtotal = cartSubtotal,
             discountTotal = cartDiscountAmount,
             taxPercent = if (_taxEnabled.value) _storeProfile.value.taxPercent else 0.0,
@@ -318,10 +397,13 @@ class PosViewModel(application: Application) : AndroidViewModel(application) {
             serviceAmount = cartServiceAmount,
             grandTotal = cartGrandTotal,
             status = OrderStatus.HELD_DRAFT.name,
-            draftTag = if (draftTag.isBlank()) "Meja ${draftOrders.value.size + 1}" else draftTag,
+            draftTag = effectiveTag,
             itemsJson = PosRepository.serializeItems(_cartItems.value)
         )
         viewModelScope.launch {
+            if (existingDraft != null) {
+                repository.deleteDraftOrder(existingDraft)
+            }
             repository.saveDraftOrder(draft)
             clearCart()
         }
@@ -333,6 +415,9 @@ class PosViewModel(application: Application) : AndroidViewModel(application) {
         _transactionDiscountPercent.value = 0.0
         _taxEnabled.value = draft.taxAmount > 0
         _serviceEnabled.value = draft.serviceAmount > 0
+        if (draft.draftTag.isNotBlank()) {
+            _selectedTable.value = draft.draftTag
+        }
         viewModelScope.launch {
             repository.deleteDraftOrder(draft)
         }
@@ -362,13 +447,19 @@ class PosViewModel(application: Application) : AndroidViewModel(application) {
         shippingFee: Double = _onlineShippingFee.value
     ) {
         val isOnline = _storeProfile.value.businessType == BusinessType.ONLINE
+        val isResto = _storeProfile.value.businessType == BusinessType.RESTAURANT
+        val currentTable = _selectedTable.value
         val actualShippingFee = if (isOnline) shippingFee.coerceAtLeast(0.0) else 0.0
         val grandTotal = cartGrandTotal + actualShippingFee
         val change = if (method == PaymentMethod.CASH) (cashPaid - grandTotal).coerceAtLeast(0.0) else 0.0
         val orderId = "ORD-" + System.currentTimeMillis().toString().takeLast(8)
         val activeShift = if (isOnline) null else shifts.value.find { it.status == "OPEN" }
         val finalCustName = customerName.trim().ifBlank {
-            _selectedCustomer.value?.name ?: if (isOnline) "Pelanggan Online" else "Pelanggan Walk-In"
+            _selectedCustomer.value?.name ?: when {
+                isOnline -> "Pelanggan Online"
+                isResto -> "Tamu $currentTable"
+                else -> "Pelanggan Walk-In"
+            }
         }
         val finalNote = if (receiptNote.isNotBlank()) receiptNote else _transactionNote.value
 
@@ -397,6 +488,7 @@ class PosViewModel(application: Application) : AndroidViewModel(application) {
             splitAmount2 = splitAmt2,
             orderNote = finalNote,
             status = OrderStatus.COMPLETED.name,
+            draftTag = if (isResto) currentTable else "",
             itemsJson = PosRepository.serializeItems(_cartItems.value),
             shippingAddress = if (isOnline) shippingAddress else "",
             courier = if (isOnline) courier.ifBlank { _storeProfile.value.defaultCourier } else "",
@@ -411,6 +503,13 @@ class PosViewModel(application: Application) : AndroidViewModel(application) {
                 customer = _selectedCustomer.value,
                 redeemedPoints = _redeemedPoints.value
             )
+            // If table had an active held draft, clean it up so table is marked empty
+            if (isResto) {
+                val tableDraft = getTableDraft(currentTable)
+                if (tableDraft != null) {
+                    repository.deleteDraftOrder(tableDraft)
+                }
+            }
             _lastCompletedOrder.value = order
             _lastCompletedItems.value = itemsToKeep
             _showReceiptDialog.value = true

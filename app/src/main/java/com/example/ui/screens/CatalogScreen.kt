@@ -34,8 +34,8 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Divider
 import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedButton
@@ -67,6 +67,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.data.model.BusinessType
 import com.example.data.model.Product
 import com.example.data.model.UserRole
 import com.example.ui.PosTab
@@ -87,17 +88,19 @@ fun CatalogScreen(
 ) {
     val products by viewModel.products.collectAsStateWithLifecycle()
     val currentUser by viewModel.currentUser.collectAsStateWithLifecycle()
+    val storeProfile by viewModel.storeProfile.collectAsStateWithLifecycle()
+    val isResto = storeProfile.businessType == BusinessType.RESTAURANT
 
     var searchQuery by remember { mutableStateOf("") }
     var productToEdit by remember { mutableStateOf<Product?>(null) }
     var showAddDialog by remember { mutableStateOf(false) }
 
-    val filtered = remember(products, searchQuery) {
+    val filtered = remember(products, searchQuery, isResto) {
         if (searchQuery.isBlank()) products else {
             products.filter {
                 it.name.contains(searchQuery, ignoreCase = true) ||
                         it.sku.contains(searchQuery, ignoreCase = true) ||
-                        it.barcode.contains(searchQuery, ignoreCase = true) ||
+                        (!isResto && it.barcode.contains(searchQuery, ignoreCase = true)) ||
                         it.category.contains(searchQuery, ignoreCase = true)
             }
         }
@@ -112,8 +115,17 @@ fun CatalogScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column {
-                    Text("Katalog & Master Produk", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = DarkSlate)
-                    Text("Total: ${products.size} produk terdaftar", fontSize = 12.sp, color = Color(0xFF64748B))
+                    Text(
+                        text = if (isResto) "Daftar Menu Cafe & Resto" else "Katalog Produk",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 18.sp,
+                        color = DarkSlate
+                    )
+                    Text(
+                        text = if (isResto) "Total: ${products.size} menu terdaftar" else "Total: ${products.size} produk terdaftar",
+                        fontSize = 12.sp,
+                        color = Color(0xFF64748B)
+                    )
                 }
                 Button(
                     onClick = { showAddDialog = true },
@@ -132,7 +144,7 @@ fun CatalogScreen(
             OutlinedTextField(
                 value = searchQuery,
                 onValueChange = { searchQuery = it },
-                placeholder = { Text("Cari berdasarkan nama, SKU, atau kategori...", fontSize = 13.sp) },
+                placeholder = { Text(if (isResto) "Cari menu atau kategori..." else "Cari berdasarkan nama, SKU, atau kategori...", fontSize = 13.sp) },
                 leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = VibrantBlue) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
@@ -179,16 +191,22 @@ fun CatalogScreen(
                                     Spacer(modifier = Modifier.width(10.dp))
                                     Column {
                                         Text(product.name, fontWeight = FontWeight.Bold, fontSize = 14.sp, color = DarkSlate)
-                                        Text("SKU: ${product.sku} • Barcode: ${product.barcode.ifBlank { "-" }}", fontSize = 11.sp, color = Color(0xFF64748B))
+                                        Text(
+                                            text = if (isResto) "Kategori: ${product.category} • ${product.sku}" else "SKU: ${product.sku} • Barcode: ${product.barcode.ifBlank { "-" }}",
+                                            fontSize = 11.sp,
+                                            color = Color(0xFF64748B)
+                                        )
                                     }
                                 }
 
                                 Row {
-                                    IconButton(onClick = {
-                                        viewModel.selectProductForBarcode(product)
-                                        viewModel.setTab(PosTab.BARCODE_ENGINE)
-                                    }) {
-                                        Icon(Icons.Default.QrCode, contentDescription = "Cetak Barcode", tint = DeepRoyalBlue)
+                                    if (!isResto) {
+                                        IconButton(onClick = {
+                                            viewModel.selectProductForBarcode(product)
+                                            viewModel.setTab(PosTab.BARCODE_ENGINE)
+                                        }) {
+                                            Icon(Icons.Default.QrCode, contentDescription = "Cetak Barcode", tint = DeepRoyalBlue)
+                                        }
                                     }
                                     IconButton(onClick = { productToEdit = product }) {
                                         Icon(Icons.Default.Edit, contentDescription = "Edit", tint = VibrantBlue)
@@ -201,7 +219,7 @@ fun CatalogScreen(
                                 }
                             }
 
-                            Divider(color = Color(0xFFF1F5F9), modifier = Modifier.padding(vertical = 8.dp))
+                            HorizontalDivider(color = Color(0xFFF1F5F9), modifier = Modifier.padding(vertical = 8.dp))
 
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
@@ -316,7 +334,13 @@ fun CatalogScreen(
                     enabled = name.isNotBlank() && sellP > 0,
                     colors = ButtonDefaults.buttonColors(containerColor = DeepRoyalBlue, contentColor = CrispWhite)
                 ) {
-                    Text(if (editing == null) "Tambah Produk" else "Simpan Perubahan", color = CrispWhite, fontWeight = FontWeight.Bold)
+                    Text(
+                        text = if (editing == null) {
+                            if (isResto) "Tambah Menu" else "Tambah Produk"
+                        } else "Simpan Perubahan",
+                        color = CrispWhite,
+                        fontWeight = FontWeight.Bold
+                    )
                 }
             },
             dismissButton = {
@@ -327,7 +351,17 @@ fun CatalogScreen(
                     Text("Batal", color = Color(0xFF64748B))
                 }
             },
-            title = { Text(if (editing == null) "Tambah Produk Baru" else "Edit Produk", fontWeight = FontWeight.Bold, fontSize = 16.sp) },
+            title = {
+                Text(
+                    text = if (editing == null) {
+                        if (isResto) "Tambah Menu Baru" else "Tambah Produk Baru"
+                    } else {
+                        if (isResto) "Edit Menu" else "Edit Produk"
+                    },
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 16.sp
+                )
+            },
             text = {
                 Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
                     // Real Photo Attachment Area
@@ -456,14 +490,16 @@ fun CatalogScreen(
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(6.dp))
-                    OutlinedTextField(
-                        value = barcode,
-                        onValueChange = { barcode = it },
-                        label = { Text("Barcode / EAN-13") },
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth()
-                    )
+                    if (!isResto) {
+                        Spacer(modifier = Modifier.height(6.dp))
+                        OutlinedTextField(
+                            value = barcode,
+                            onValueChange = { barcode = it },
+                            label = { Text("Barcode / EAN-13") },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
                     Spacer(modifier = Modifier.height(6.dp))
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         OutlinedTextField(
